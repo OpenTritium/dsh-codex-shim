@@ -64,7 +64,9 @@
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-slots",
-        "@deepseek-ai/dsh-client-ui-tool"
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
       ],
       "platform": "web"
     }
@@ -81,6 +83,8 @@
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-ui-slots": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-ui-tool": ">=0.0.1-rc.1 <0.2.0",
+    "@deepseek-ai/dsh-client-ui-settings": ">=0.0.1-rc.1 <0.2.0",
+    "@deepseek-ai/dsh-client-ui-settings-plugins": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-fs": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-llm": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-sandbox": ">=0.0.1-rc.1 <0.2.0",
@@ -102,6 +106,8 @@
     "@deepseek-ai/dsh-client-ui-primitives": { "optional": true },
     "@deepseek-ai/dsh-client-ui-slots": { "optional": true },
     "@deepseek-ai/dsh-client-ui-tool": { "optional": true },
+    "@deepseek-ai/dsh-client-ui-settings": { "optional": true },
+    "@deepseek-ai/dsh-client-ui-settings-plugins": { "optional": true },
     "@deepseek-ai/dsh-fs": { "optional": true },
     "@deepseek-ai/dsh-llm": { "optional": true },
     "@deepseek-ai/dsh-sandbox": { "optional": true },

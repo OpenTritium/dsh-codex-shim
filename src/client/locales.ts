@@ -5,6 +5,19 @@ export const NS = 'codex'
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'settings.title': 'Codex 环境',
+  'settings.description': '为匹配的模型路由启用 Codex 工具与提示词界面。',
+  'settings.enabled': '启用 Codex 环境',
+  'settings.enabledHint': '关闭后所有路由继续使用宿主的工具与提示词界面。',
+  'settings.patterns': '模型模式',
+  'settings.patternsHint': '每行一个 glob 模式；* 不能与其他模式共用。',
+  'settings.overrides': '模型覆盖（JSON）',
+  'settings.overridesHint': '格式为 [{"provider":"...","model":"...","enabled":true}]。',
+  'settings.unsaved': '未保存',
+  'settings.discard': '放弃修改',
+  'settings.save': '保存',
+  'settings.saving': '保存中…',
+  'settings.failed': '设置未被部署接受，请检查输入后重试。',
   'row.running': '正在运行 Codex 工具',
   'row.failed': 'Codex 工具失败',
   'row.stopped': 'Codex 工具已中止',
@@ -29,6 +42,19 @@ export type CodexKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'settings.title': 'Codex environment',
+  'settings.description': 'Activates the Codex tool and prompt surface for matching routes.',
+  'settings.enabled': 'Enable Codex environment',
+  'settings.enabledHint': 'When off, all routes keep the host tool and prompt surface.',
+  'settings.patterns': 'Model patterns',
+  'settings.patternsHint': 'One glob pattern per line; * cannot be combined with another pattern.',
+  'settings.overrides': 'Model overrides (JSON)',
+  'settings.overridesHint': 'Use [{"provider":"...","model":"...","enabled":true}].',
+  'settings.unsaved': 'Unsaved',
+  'settings.discard': 'Discard',
+  'settings.save': 'Save',
+  'settings.saving': 'Saving…',
+  'settings.failed': 'The deployment did not accept these settings; check the values and retry.',
   'row.running': 'Running Codex tool',
   'row.failed': 'Codex tool failed',
   'row.stopped': 'Codex tool stopped',

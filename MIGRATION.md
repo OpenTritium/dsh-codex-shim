@@ -11,6 +11,6 @@ Reference checkout: `/home/tritium/migration-archives/deepseek-harness-codex-ref
 | Browser tool presentation | Public client slots and locale seam | `src/client/` |
 | OpenAI web-search provider | Discarded | Not ported |
 | Shell interactive stdin | Required upstream extension seam | Generic `ShellProcess.writeStdin` proposal |
-| Host API settings namespace wiring | Required upstream extension seam | Generic client settings discovery/proxy proposal |
+| Host API settings namespace wiring | Required upstream extension seam | Generic `settings.register({ expose: 'client' })` opt-in; shim owns the `opentritium-codex` card through `settings.plugin.item` |
 
 No OpenTritium product code is placed under the `@deepseek-ai` scope.

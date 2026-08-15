@@ -419,6 +419,7 @@ export function apply(ctx: Context, config: Config): void {
   let source: () => Config = () => config
   const logger = ctx.logger('codex-gate')
   installSettingsSection(ctx, CODEX_SETTINGS_NAMESPACE, Config, config, {
+    expose: 'client',
     validate: assertServiceableConfig,
     setSource: (current) => {
       source = current

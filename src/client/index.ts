@@ -4,7 +4,11 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { CodexToolRow } from './CodexToolRow.tsx'
+import { CodexSettingsCard, cardFace } from './CodexSettingsCard.tsx'
+import { CODEX_SETTINGS_NS, CodexSettingsCardController } from './settings-card-controller.ts'
 import { en, NS, zh, type CodexKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -15,7 +19,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Browser services required by the keyed Codex tool rows. */
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'settingsScope']
 
 const CODEX_TOOL_NAMES = [
   'exec_command',
@@ -31,9 +35,17 @@ const CODEX_TOOL_NAMES = [
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-codex: dictionaries')
+  const settings = new CodexSettingsCardController(ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }))
   ctx.slots.inject('tool.call.toolview', function* () {
     for (const key of CODEX_TOOL_NAMES) {
       yield ctx.slots.register({ name: 'tool.call.toolview', key, locale: NS }, CodexToolRow)
     }
   })
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
+    id: 'opentritium-codex',
+    order: 25,
+    locale: NS,
+    inject: () => cardFace(settings),
+  }, CodexSettingsCard))
 }

@@ -25,10 +25,24 @@ For local development, replace the Git URL with the local repository path. Profi
 - `exec_command`, `apply_patch`, `view_image`, and `update_plan` adapters over public Harness services.
 - `web_run` over `ctx.web.search()`.
 - Browser tool rows for Codex tool calls.
+- A **Settings -> Plugins -> Plugin configuration** card that edits the
+  `opentritium-codex` user layer. The profile overlay remains its composition
+  default; browser saves never rewrite `cordis.patch.yml`.
 
 `web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, arbitrary page fetch, or an OpenAI-hosted search provider.
 
 ## Upstream Seam Required
+
+The pinned upstream's settings transport has an explicit namespace allowlist,
+so an external settings card cannot use `ctx.settingsScope` for its own
+namespace. The separately reviewable generic patch used for development adds
+`expose: 'client'` to `settings.register()` and makes the Host API Proxy serve
+only namespaces that explicitly opt in. This bundle declares that option for
+`opentritium-codex`; no `@deepseek-ai` package contains Codex-specific rows.
+
+Until that generic upstream change is released, the bundle still loads and the
+profile overlay works, but its browser configuration card is intentionally
+unavailable rather than writing through an undeclared or private path.
 
 Pinned upstream exposes `ShellProcess.start()`, incremental output reads, and termination, but not an interactive stdin write method. Consequently `write_stdin` can poll an existing session but rejects non-empty `chars`; it is not advertised as interactive input support.
 

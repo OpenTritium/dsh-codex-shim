@@ -29,6 +29,13 @@ For local development, replace the Git URL with the local repository path. Profi
   `opentritium-codex` user layer. The profile overlay remains its composition
   default; browser saves never rewrite `cordis.patch.yml`.
 
+Browser contributions are dependency-gated. Tool rows wait only for the common
+`slots` and `locale` services; the settings card is mounted separately when
+`settingsScope` and the `settings.plugin.item` slot are provided. A headless
+profile therefore keeps the host tools and prompt without loading browser code,
+and a partial WebUI does not lose tool rows because its settings surface is
+absent.
+
 `web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, arbitrary page fetch, or an OpenAI-hosted search provider.
 
 ## Upstream Seam Required

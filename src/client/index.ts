@@ -1,11 +1,13 @@
 /** Browser-side Codex tool presentation: keyed rows with standard icons. */
 
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+import type {} from '@deepseek-ai/dsh-client-connection/client'
 import { CodexToolRow } from './CodexToolRow.tsx'
 import { CodexSettingsCard, cardFace } from './CodexSettingsCard.tsx'
 import { CODEX_SETTINGS_NS, CodexSettingsCardController } from './settings-card-controller.ts'
@@ -42,12 +44,13 @@ export function apply(ctx: ClientContext): void {
   })
   // Settings is an optional browser surface. Keep its dependency out of the
   // root plugin so a WebUI without the settings transport still gets tool rows.
-  ctx.inject(['settingsScope'], installSettings)
+  ctx.inject(['settingsScope', 'connection'], installSettings)
 }
 
 /** Mount the settings card once the settings transport is available. */
 function installSettings(ctx: ClientContext): void {
-  const settings = new CodexSettingsCardController(ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }))
+  const connection = ctx.get('connection') as ConnectionHandle
+  const settings = new CodexSettingsCardController(ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }), connection.api)
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     id: 'opentritium-codex',

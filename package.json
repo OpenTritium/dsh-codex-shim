@@ -61,6 +61,7 @@
     "client": {
       "inject": [
         "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-connection",
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-slots",
@@ -79,6 +80,7 @@
     "@deepseek-ai/dsh-agent": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-attachment": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-locale": ">=0.0.1-rc.1 <0.2.0",
+    "@deepseek-ai/dsh-client-connection": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-runtime": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.0.1-rc.1 <0.2.0",
     "@deepseek-ai/dsh-client-ui-slots": ">=0.0.1-rc.1 <0.2.0",
@@ -102,6 +104,7 @@
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-attachment": { "optional": true },
     "@deepseek-ai/dsh-client-locale": { "optional": true },
+    "@deepseek-ai/dsh-client-connection": { "optional": true },
     "@deepseek-ai/dsh-client-runtime": { "optional": true },
     "@deepseek-ai/dsh-client-ui-primitives": { "optional": true },
     "@deepseek-ai/dsh-client-ui-slots": { "optional": true },

@@ -1,3 +1,4 @@
+import type { IApiClient, ModelProviderGroup } from '@deepseek-ai/dsh-client-connection/client'
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 
@@ -5,6 +6,14 @@ export const CODEX_SETTINGS_NS = 'opentritium-codex'
 
 export interface ModelOverride { provider: string; model: string; enabled: boolean }
 export interface CodexSettings { enabled?: boolean; modelPatterns?: string[]; modelOverrides?: ModelOverride[] }
+export type ModelDecision = 'default' | 'enabled' | 'disabled'
+export interface CodexModelRow {
+  provider: string
+  providerName: string
+  model: string
+  modelName: string
+  decision: ModelDecision
+}
 export interface FieldState { text: string; overridden: boolean; invalid: boolean }
 export interface CodexSettingsState {
   available: boolean
@@ -14,7 +23,10 @@ export interface CodexSettingsState {
   failed: boolean
   enabled: FieldState
   modelPatterns: FieldState
-  modelOverrides: FieldState
+  modelOverridesOverridden: boolean
+  modelsStatus: 'loading' | 'ready' | 'error'
+  modelsError: string | undefined
+  models: readonly CodexModelRow[]
 }
 
 function validOverrides(value: unknown): value is ModelOverride[] {
@@ -27,88 +39,169 @@ function validOverrides(value: unknown): value is ModelOverride[] {
   })
 }
 
-function parseField(field: keyof CodexSettings, text: string): unknown | undefined {
-  if (field === 'enabled') return text === 'true' ? true : text === 'false' ? false : undefined
-  if (field === 'modelPatterns') {
-    const values = text.split(/\r?\n/).map(value => value.trim()).filter(Boolean)
-    return values.includes('*') && values.length > 1 ? undefined : values
-  }
-  try {
-    const value: unknown = JSON.parse(text)
-    return validOverrides(value) ? value : undefined
-  } catch { return undefined }
+function parsePatterns(text: string): string[] | undefined {
+  const values = text.split(/\r?\n/).map(value => value.trim()).filter(Boolean)
+  return values.includes('*') && values.length > 1 ? undefined : values
 }
 
-function formatField(field: keyof CodexSettings, value: unknown): string {
-  if (field === 'enabled') return value === true ? 'true' : value === false ? 'false' : ''
-  if (field === 'modelPatterns') return Array.isArray(value) ? value.join('\n') : ''
-  return JSON.stringify(validOverrides(value) ? value : [], null, 2)
+function formatPatterns(value: unknown): string {
+  return Array.isArray(value) ? value.join('\n') : ''
 }
 
-/** Owns staged edits for the Codex settings card. */
+function modelDecision(overrides: readonly ModelOverride[], provider: string, model: string): ModelDecision {
+  const override = overrides.find(item => item.provider === provider && item.model === model)
+  return override === undefined ? 'default' : override.enabled ? 'enabled' : 'disabled'
+}
+
+function modelRows(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelRow[] {
+  return groups.flatMap(group => group.models.map(model => ({
+    provider: group.id,
+    providerName: group.name,
+    model: model.id,
+    modelName: model.name,
+    decision: modelDecision(overrides, group.id, model.id),
+  })))
+}
+
+/** Owns staged edits, model-directory loading, and persistence for the Codex settings card. */
 export class CodexSettingsCardController {
-  private readonly drafts = new Map<keyof CodexSettings, string>()
-  private readonly cleared = new Set<keyof CodexSettings>()
+  private readonly drafts = new Map<'enabled' | 'modelPatterns', string>()
+  private readonly cleared = new Set<'enabled' | 'modelPatterns' | 'modelOverrides'>()
   private readonly store: SnapshotStore<CodexSettingsState>
   private saving = false
   private failed = false
+  private modelsStatus: CodexSettingsState['modelsStatus'] = 'loading'
+  private modelsError: string | undefined
+  private groups: ModelProviderGroup[] = []
+  private draftOverrides: ModelOverride[] | undefined
 
-  constructor(private readonly scope: SettingsScope<CodexSettings>) {
+  constructor(
+    private readonly scope: SettingsScope<CodexSettings>,
+    private readonly api: Pick<IApiClient, 'llm'>,
+  ) {
     this.store = createSnapshotStore(this.snapshot())
     scope.subscribe(() => this.publish())
+    void this.loadModels()
   }
 
   private publish(): void { this.store.set(this.snapshot()) }
 
-  private field(field: keyof CodexSettings): FieldState {
-    const current = this.scope.getSnapshot()
+  private current(): CodexSettings {
+    return this.scope.getSnapshot().value ?? {}
+  }
+
+  private field(field: 'enabled' | 'modelPatterns'): FieldState {
+    const current = this.current()
     const draft = this.drafts.get(field)
-    const text = draft ?? formatField(field, current.value?.[field])
+    const text = draft ?? (field === 'enabled'
+      ? current.enabled === undefined ? '' : String(current.enabled)
+      : formatPatterns(current.modelPatterns))
     return {
       text,
-      overridden: this.cleared.has(field) ? false : draft !== undefined || current.user !== undefined && field in (current.user as object),
-      invalid: draft !== undefined && parseField(field, draft) === undefined,
+      overridden: this.cleared.has(field) ? false : draft !== undefined || this.scope.getSnapshot().user !== undefined && field in (this.scope.getSnapshot().user as object),
+      invalid: field === 'modelPatterns' && draft !== undefined && parsePatterns(draft) === undefined,
     }
+  }
+
+  private overrides(): ModelOverride[] {
+    if (this.cleared.has('modelOverrides')) return []
+    if (this.draftOverrides !== undefined) return this.draftOverrides
+    const configured = this.current().modelOverrides
+    return validOverrides(configured) ? configured : []
   }
 
   private snapshot(): CodexSettingsState {
     const current = this.scope.getSnapshot()
-    const fields = {
+    const overrides = this.overrides()
+    return {
+      available: current.status === 'ready',
+      writable: current.writable,
+      dirty: this.drafts.size > 0 || this.draftOverrides !== undefined || this.cleared.size > 0,
+      saving: this.saving,
+      failed: this.failed,
       enabled: this.field('enabled'),
       modelPatterns: this.field('modelPatterns'),
-      modelOverrides: this.field('modelOverrides'),
+      modelOverridesOverridden: !this.cleared.has('modelOverrides') && current.user !== undefined && 'modelOverrides' in (current.user as object),
+      modelsStatus: this.modelsStatus,
+      modelsError: this.modelsError,
+      models: modelRows(this.groups, overrides),
     }
-    return {
-      available: current.status === 'ready', writable: current.writable,
-      dirty: this.drafts.size > 0 || this.cleared.size > 0,
-      saving: this.saving, failed: this.failed, ...fields,
+  }
+
+  private async loadModels(): Promise<void> {
+    try {
+      const response = await this.api.llm.models({})
+      if (!response.result.ok) throw new Error(response.result.error.message)
+      this.groups = response.result.value.groups
+      this.modelsStatus = 'ready'
+      this.modelsError = response.result.value.failures.length > 0
+        ? response.result.value.failures.map(failure => `${failure.name}: ${failure.message}`).join('; ')
+        : undefined
+    } catch (error) {
+      this.modelsStatus = 'error'
+      this.modelsError = error instanceof Error ? error.message : String(error)
     }
+    this.publish()
   }
 
   getStore(): SnapshotStore<CodexSettingsState> { return this.store }
 
-  edit(field: keyof CodexSettings, text: string): void {
-    this.drafts.set(field, text); this.cleared.delete(field); this.failed = false; this.publish()
+  edit(field: 'enabled' | 'modelPatterns', text: string): void {
+    this.drafts.set(field, text)
+    this.cleared.delete(field)
+    this.failed = false
+    this.publish()
   }
 
-  reset(field: keyof CodexSettings): void {
-    this.drafts.delete(field); this.cleared.add(field); this.failed = false; this.publish()
+  setModelDecision(provider: string, model: string, decision: ModelDecision): void {
+    if (modelDecision(this.overrides(), provider, model) === decision) return
+    const next = this.overrides().filter(item => item.provider !== provider || item.model !== model)
+    if (decision !== 'default') next.push({ provider, model, enabled: decision === 'enabled' })
+    this.draftOverrides = next
+    this.cleared.delete('modelOverrides')
+    this.failed = false
+    this.publish()
   }
 
-  discard(): void { this.drafts.clear(); this.cleared.clear(); this.failed = false; this.publish() }
+  reset(field: 'enabled' | 'modelPatterns' | 'modelOverrides'): void {
+    if (field !== 'modelOverrides') this.drafts.delete(field)
+    if (field === 'modelOverrides') this.draftOverrides = undefined
+    this.cleared.add(field)
+    this.failed = false
+    this.publish()
+  }
+
+  discard(): void {
+    this.drafts.clear()
+    this.draftOverrides = undefined
+    this.cleared.clear()
+    this.failed = false
+    this.publish()
+  }
 
   async save(): Promise<void> {
     if (this.saving || !this.scope.getSnapshot().writable) return
-    const writes = [...new Set([...this.drafts.keys(), ...this.cleared])]
-    if (writes.some(field => !this.cleared.has(field) && parseField(field, this.drafts.get(field)!) === undefined)) return
-    this.saving = true; this.failed = false; this.publish()
+    const writes = new Set<'enabled' | 'modelPatterns' | 'modelOverrides'>([
+      ...this.drafts.keys(),
+      ...(this.draftOverrides !== undefined ? ['modelOverrides' as const] : []),
+      ...this.cleared,
+    ])
+    if (writes.has('modelPatterns') && parsePatterns(this.drafts.get('modelPatterns') ?? '') === undefined) return
+    this.saving = true
+    this.failed = false
+    this.publish()
     try {
       for (const field of writes) {
         if (this.cleared.has(field)) await this.scope.unset(field)
-        else await this.scope.set(field, parseField(field, this.drafts.get(field)!)!)
+        else if (field === 'enabled') await this.scope.set(field, this.drafts.get(field) === 'true')
+        else if (field === 'modelPatterns') await this.scope.set(field, parsePatterns(this.drafts.get(field) ?? '')!)
+        else await this.scope.set(field, this.overrides())
       }
-      this.drafts.clear(); this.cleared.clear()
+      this.drafts.clear()
+      this.draftOverrides = undefined
+      this.cleared.clear()
     } catch { this.failed = true }
-    this.saving = false; this.publish()
+    this.saving = false
+    this.publish()
   }
 }

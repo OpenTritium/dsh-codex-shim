@@ -30,7 +30,11 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           test "$GITHUB_REF_NAME" = "v$version"
 
-      - run: pnpm run check
+      - run: pnpm run format:check
+      - run: pnpm run lint
+      - run: pnpm run test
+      - run: pnpm run build
+      - run: git diff --exit-code -- lib
       - run: mkdir -p dist
       - run: pnpm pack --pack-destination dist
 

@@ -83,7 +83,11 @@ export default defineConfig([
             cssModules: { pattern: '[hash]_[local]' },
             minify: true,
           })
-          const classes = Object.fromEntries(Object.entries(exports ?? {}).map(([key, value]) => [key, value.name]))
+          const classes = Object.fromEntries(
+            Object.entries(exports ?? {})
+              .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+              .map(([key, value]) => [key, value.name]),
+          )
           const tag = `${PACKAGE}/${basename(file)}`
           return [
             `const css = ${JSON.stringify(code.toString())};`,

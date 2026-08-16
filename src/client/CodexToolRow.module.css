@@ -162,14 +162,6 @@
   padding: 8px 10px;
 }
 
-.planExplanation,
-.planEmpty {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
 .planOverview {
   display: flex;
   align-items: center;
@@ -199,101 +191,6 @@
   border-radius: inherit;
   background: var(--dsw-alias-state-success-primary);
   transition: width 180ms ease-out;
-}
-
-.planItems {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.planItems::before {
-  content: '';
-  position: absolute;
-  top: 9px;
-  bottom: 9px;
-  left: 7px;
-  width: 1px;
-  background: var(--dsw-alias-border-l2);
-}
-
-.planExplanation + .planItems {
-  margin-top: 8px;
-}
-
-.planItem {
-  display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) max-content;
-  align-items: start;
-  gap: 8px;
-  min-width: 0;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.planMarker {
-  position: relative;
-  z-index: 1;
-  box-sizing: border-box;
-  width: 12px;
-  height: 12px;
-  margin: 3px 1px;
-  border: 1px dashed var(--dsw-alias-label-caption);
-  border-radius: 50%;
-}
-
-.planItem[data-status='in_progress'] .planMarker {
-  border: 3px solid var(--dsw-alias-state-business-primary);
-  border-right-color: transparent;
-  animation: dsh-codex-plan-progress 1s linear infinite;
-}
-
-.planItem[data-status='completed'] .planMarker {
-  border-style: solid;
-  border-color: var(--dsw-alias-state-success-primary);
-  background: var(--dsw-alias-state-success-primary);
-}
-
-.planItem[data-status='completed'] .planMarker::after {
-  content: '';
-  display: block;
-  width: 4px;
-  height: 2px;
-  margin: 2px 0 0 2px;
-  border-bottom: 1px solid var(--dsw-alias-bg-base);
-  border-left: 1px solid var(--dsw-alias-bg-base);
-  transform: rotate(-45deg);
-}
-
-.planStep {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.planItem[data-status='completed'] .planStep {
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.planStatus {
-  color: var(--dsw-alias-label-caption);
-  white-space: nowrap;
-}
-
-.planItem[data-status='in_progress'] .planStatus {
-  color: var(--dsw-alias-state-business-primary);
-}
-
-.planItem[data-status='completed'] .planStatus {
-  color: var(--dsw-alias-state-success-primary);
-}
-
-@keyframes dsh-codex-plan-progress {
-  to { transform: rotate(360deg); }
 }
 
 .imageMeta {
@@ -377,10 +274,6 @@
 @media (prefers-reduced-motion: reduce) {
   .root[data-state='running'] .row::after {
     display: none;
-    animation: none;
-  }
-
-  .planItem[data-status='in_progress'] .planMarker {
     animation: none;
   }
 

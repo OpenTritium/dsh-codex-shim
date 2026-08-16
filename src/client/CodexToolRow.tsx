@@ -17,7 +17,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import css from './CodexToolRow.module.css'
-import { parsePlanPresentation, type PlanPresentation, type PlanStatus } from './plan-presentation.ts'
+import { parsePlanPresentation, type PlanPresentation } from './plan-presentation.ts'
 import { splitTerminalOutput } from './terminal-output.ts'
 
 type CodexToolRowProps = ToolCallViewProps & PropsLocale<'codex'>
@@ -153,14 +153,6 @@ function stateLabel(state: CodexRowState, t: CodexToolRowProps['t']): string | n
     case 'error': return t('row.failed')
     case 'stopped': return t('row.stopped')
     default: return null
-  }
-}
-
-function planStatusLabel(status: PlanStatus, t: CodexToolRowProps['t']): string {
-  switch (status) {
-    case 'completed': return t('row.planCompleted')
-    case 'in_progress': return t('row.planInProgress')
-    case 'pending': return t('row.planPending')
   }
 }
 
@@ -303,38 +295,24 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
             <section className={css.planCard} aria-label={t('row.plan')}>
               <span className={css.ioLabel}>{t('row.plan')}</span>
               <div className={css.planContent}>
-                {plan.explanation === undefined ? null : <p className={css.planExplanation}>{plan.explanation}</p>}
-                {plan.items.length === 0 ? null : (
-                  <div className={css.planOverview}>
-                    <span className={css.planProgressLabel}>
-                      {t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
-                    </span>
+                <div className={css.planOverview}>
+                  <span className={css.planProgressLabel}>
+                    {t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
+                  </span>
+                  <span
+                    className={css.planProgressTrack}
+                    role="progressbar"
+                    aria-label={t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
+                    aria-valuemin={0}
+                    aria-valuemax={plan.items.length}
+                    aria-valuenow={completedPlanItems}
+                  >
                     <span
-                      className={css.planProgressTrack}
-                      role="progressbar"
-                      aria-label={t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
-                      aria-valuemin={0}
-                      aria-valuemax={plan.items.length}
-                      aria-valuenow={completedPlanItems}
-                    >
-                      <span
-                        className={css.planProgressValue}
-                        style={{ width: `${(completedPlanItems / plan.items.length) * 100}%` }}
-                      />
-                    </span>
-                  </div>
-                )}
-                {plan.items.length === 0 ? <p className={css.planEmpty}>{t('row.planEmpty')}</p> : (
-                  <ol className={css.planItems}>
-                    {plan.items.map((item, index) => (
-                      <li className={css.planItem} data-status={item.status} key={`${item.step}:${index}`}>
-                        <span className={css.planMarker} aria-hidden />
-                        <span className={css.planStep}>{item.step}</span>
-                        <span className={css.planStatus}>{planStatusLabel(item.status, t)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
+                      className={css.planProgressValue}
+                      style={{ width: plan.items.length === 0 ? '0%' : `${(completedPlanItems / plan.items.length) * 100}%` }}
+                    />
+                  </span>
+                </div>
               </div>
             </section>
           ) : null}

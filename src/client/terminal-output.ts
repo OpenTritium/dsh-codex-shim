@@ -19,9 +19,12 @@ export interface TerminalOutputSections {
 export function splitTerminalOutput(text: string): TerminalOutputSections {
   const outputMarker = '\nOutput:\n'
   const outputStart = text.indexOf(outputMarker)
-  const body = outputStart !== -1
+  const prefix = outputStart === -1 ? text.slice(0, 'Output:\n'.length) : text.slice(0, outputStart)
+  const hasEnvelope = text.startsWith('Output:\n')
+    || /(?:^|\n)(?:Chunk ID: |Wall time: |Process (?:exited|running)|Original token count: )/.test(prefix)
+  const body = hasEnvelope && outputStart !== -1
     ? text.slice(outputStart + outputMarker.length)
-    : text.startsWith('Output:\n')
+    : hasEnvelope && text.startsWith('Output:\n')
       ? text.slice('Output:\n'.length)
       : text
   const stderrMarker = '\n[stderr]\n'

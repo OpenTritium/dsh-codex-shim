@@ -4,26 +4,51 @@
 
 `@opentritium/dsh-codex-shim` is an OpenTritium plugin for DeepSeek Harness (DSH). It gives selected model routes a Codex-style prompt, tool vocabulary, tool results, and WebUI presentation so GPT-family and other Codex-adapted models can make more reliable tool calls.
 
-This is a shim, not a Codex runtime. It does not start a Codex app-server, handle Codex OAuth, provide models or credentials, execute commands by itself, or provide a web-search backend. It consumes DSH capabilities through their public service definitions and keeps the upstream behavior available when the route is inactive or the bundle is removed.
+This is a shim, not a Codex runtime. It does not start a Codex app-server, handle Codex OAuth, provide models or credentials, execute commands by itself, or provide a web-search backend. It consumes DSH capabilities through their public service definitions; when a model does not match or the bundle is removed, DSH continues with its normal tools and behavior.
 
 ## Install in a profile
 
-Install the prebuilt bundle into the normal WebUI profile. `dsh plugin` owns the profile manifest and dependency list:
+The examples below install the bundle into the WebUI `web` profile. `dsh plugin` owns the profile manifest and dependency list.
+
+#### Download the Release tarball with `gh`
 
 ```sh
-gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz'
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
+gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz'
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
 dsh --profile web --dump-config
 ```
 
-This works with the bundled `gpt-5.6-*` rule. The current unpatched DSH WebUI does not display or save the shim settings card, but the bundle remains configurable through `settings.yaml` below. Apply the optional source checkout patch only when the settings card is required.
+Without GitHub CLI, download the same latest-release asset with `curl` and `jq`:
 
-### Configure without a WebUI patch
+```sh
+curl -fsSL https://api.github.com/repos/OpenTritium/dsh-codex-shim/releases/latest \
+  | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url' \
+  | xargs -r curl -fLO
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+dsh --profile web --dump-config
+```
 
-No DSH source patch is required to install or configure the bundle. The settings provider layers the `opentritium-codex` section in `$DSH_HOME/settings.yaml` (normally `~/.dsh/settings.yaml`) above the bundle's defaults. Create or edit that section directly; the default `gpt-5.6-*` automatic rule remains in force until `modelPatterns` is explicitly set.
+#### Build an installable tarball from the Git tag
+
+Git cannot download GitHub Release assets: the Release tarball is not stored in Git. When `gh` is unavailable, clone the exact tag and locally pack its committed `lib/` output instead:
+
+```sh
+VERSION=vX.Y.Z
+git clone --depth 1 --branch "$VERSION" https://github.com/OpenTritium/dsh-codex-shim.git
+cd dsh-codex-shim
+pnpm pack --pack-destination dist
+dsh plugin --profile web add ./dist/opentritium-dsh-codex-shim-*.tgz
+dsh --profile web --dump-config
+```
+
+**If the bundled `gpt-5.6-*` rule is enough, skip the next two configuration sections.**
+
+### Configure through a configuration file
+
+No DSH source patch is required to install or configure the bundle. The settings provider layers the `codex-shim` section in `$DSH_HOME/settings.yaml` (normally `~/.dsh/settings.yaml`) above the bundle's defaults. Create or edit that section directly; the default `gpt-5.6-*` automatic rule remains in force until `modelPatterns` is explicitly set.
 
 ```yaml
-opentritium-codex:
+codex-shim:
   enabled: true
   modelPatterns:
     - gpt-5.6-*
@@ -41,21 +66,21 @@ opentritium-codex:
 
 The file-backed settings provider watches valid edits, so the route policy updates live. If a profile uses another settings provider, configure the same namespace through that provider instead.
 
-### Optional WebUI settings card
+### Patch the WebUI for visual configuration (optional)
 
 DSH `47f943859bef60e4160492346772ded9b24f765a` does not yet let an external bundle expose a settings namespace to the WebUI. Install the tarball and use `settings.yaml` above if a settings card is unnecessary. For the better GUI experience, the matching release includes `deepseek-harness-settings-client-exposure-47f9438.patch`: a general WebUI settings allowlist extension with no OpenTritium or Codex behavior.
 
 Apply the patch only to that exact clean DSH commit, rebuild DSH, then install the release tarball:
 
 ```sh
-gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
+gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
 git clone https://github.com/deepseek-ai/deepseek-harness.git deepseek-harness
 cd deepseek-harness
 git checkout 47f943859bef60e4160492346772ded9b24f765a
 git apply --check ../deepseek-harness-settings-client-exposure-47f9438.patch
 git apply ../deepseek-harness-settings-client-exposure-47f9438.patch
 pnpm install && pnpm run build
-pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-0.1.0.tgz
+pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-*.tgz
 pnpm dsh --profile web --dump-config
 ```
 
@@ -80,9 +105,7 @@ pnpm run build
 pnpm dsh --profile web --dump-config
 ```
 
-`dsh plugin remove` removes the profile dependency and its bundle layer. To discard saved shim preferences as well, remove only the `opentritium-codex:` section from `$DSH_HOME/settings.yaml` after stopping DSH.
-
-The profile loads `@deepseek-ai/dsh-base` first and this bundle afterward. Keep model credentials, provider settings, and environment variables in the profile.
+`dsh plugin remove` removes the profile dependency and its bundle layer. To clear saved shim preferences as well, delete the complete `codex-shim:` section from `$DSH_HOME/settings.yaml`; the file-backed settings provider reloads valid edits.
 
 ## Route and configuration
 
@@ -107,7 +130,7 @@ The following tools are registered by the bundle and advertised only on an activ
 | `update_plan`  | Available   | Durable `todo/write` session event    | Stores `pending`, `in_progress`, and `completed` steps with at most one active step.                                                                                    |
 | `web_run`      | Search-only | `ctx.web.search()`                    | Accepts multiple `search_query` items and returns provider sources. It does not implement `open`, `click`, `find`, screenshots, or arbitrary fetch.                     |
 
-## Masked host tools
+## Masked tools
 
 When a replacement tool is present, the gate hides overlapping host tools from the active prompt advertisement. It does not unregister them, so the host surface returns when the route changes or the shim is removed.
 
@@ -137,6 +160,7 @@ These items are deferred work; they are not current capabilities:
 
 - **OpenAI Responses web fetch:** add a separate DSH web definition/provider that uses the active Responses endpoint for the matched route, then expose page references, navigation, and fetch operations only when the provider supports them. Keep `web_run` search-only when it does not. Do not hardcode an endpoint or add an OpenAI-hosted search provider to this shim.
 - **Interactive terminal:** extend the generic DSH shell definition and providers with stdin writes, signals, session listing/open/close, PTY behavior, and cross-platform parity; then upgrade `write_stdin` and session handling without claiming unsupported operations.
+- **Windows compatibility:** add Windows CI coverage for bundle installation, profile composition, supported tool behavior, and WebUI startup before claiming Windows support.
 - **Codex parity:** compare tool schemas, argument validation, errors, lifecycle behavior, permission prompts, transcript events, and WebUI presentation against the referenced Codex release. Add composition and acceptance tests for every supported capability before widening the surface.
 
 The goal is the closest practical Codex experience over DSH capabilities. Runtime, OAuth, and Responses wire-protocol compatibility remain outside this package.

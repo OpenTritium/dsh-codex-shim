@@ -115,12 +115,12 @@ function installSettings(ctx: ClientContext): void {
     ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }),
     connection.api,
   )
-  ctx.effect(() => () => settings.dispose(), 'ui-codex: settings controller')
+  ctx.effect(() => () => settings.dispose(), 'ui-codex-shim: settings controller')
   ctx.slots.inject('settings.plugin.item', () =>
     ctx.slots.register(
       {
         name: 'settings.plugin.item',
-        id: 'opentritium-codex',
+        id: 'codex-shim',
         order: 25,
         locale: NS,
         inject: () => cardFace(settings),

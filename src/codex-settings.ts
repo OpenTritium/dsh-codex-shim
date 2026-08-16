@@ -1,4 +1,4 @@
-export const CODEX_SETTINGS_NS = 'opentritium-codex'
+export const CODEX_SETTINGS_NS = 'codex-shim'
 
 export interface CodexModelOverride {
   provider: string

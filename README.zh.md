@@ -4,26 +4,51 @@
 
 `@opentritium/dsh-codex-shim` 是 OpenTritium 为 DeepSeek Harness（DSH）提供的插件。它在选定的模型路由上提供 Codex 风格的 prompt、tool vocabulary、工具结果和 WebUI 展示，让 GPT 系列及其他适配 Codex 的模型更可靠地调用工具。
 
-本包是 shim，不是 Codex runtime。它不启动 Codex app-server，不处理 Codex OAuth，不提供模型、凭据、命令执行器或网页搜索后端。插件只通过 DSH 的公开 Service Definition、Consumer 和 UI slot 使用现有能力；路由未命中或移除 bundle 后，上游行为保持可用。
+本包是 shim，不是 Codex runtime。它不启动 Codex app-server，不处理 Codex OAuth，不提供模型、凭据、命令执行器或网页搜索后端。插件只通过 DSH 的公开 Service Definition、Consumer 和 UI slot 使用现有能力；模型不匹配或移除 bundle 后，DSH 会照常使用它原本的工具和行为。
 
 ## 在 profile 中安装
 
-建议将预构建 bundle 安装到常用的 WebUI `web` profile。由 `dsh plugin` 维护 profile manifest 和依赖列表：
+以下示例将 bundle 安装到 WebUI `web` profile。由 `dsh plugin` 维护 profile manifest 和依赖列表。
+
+#### 使用 `gh` 下载 Release tarball
 
 ```sh
-gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz'
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
+gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz'
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
 dsh --profile web --dump-config
 ```
 
-这能使用 bundle 内置的 `gpt-5.6-*` 规则。无需修补 DSH WebUI 即可安装和配置；未修补的 WebUI 只是不会显示或保存 shim 设置卡。
+没有 GitHub CLI 时，可用 `curl` 与 `jq` 下载同一个最新 Release 资产：
 
-### 不修补 WebUI 的配置方式
+```sh
+curl -fsSL https://api.github.com/repos/OpenTritium/dsh-codex-shim/releases/latest \
+  | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url' \
+  | xargs -r curl -fLO
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+dsh --profile web --dump-config
+```
 
-无需修改 DSH 源码。settings provider 会将 `$DSH_HOME/settings.yaml`（通常是 `~/.dsh/settings.yaml`）中 `opentritium-codex` 分节叠加到 bundle 默认值之上。直接创建或编辑该分节；在显式填写 `modelPatterns` 之前，默认的 `gpt-5.6-*` 自动规则仍然生效。
+#### 从 Git tag 打包可安装 tarball
+
+Git 无法下载 GitHub Release 附件：Release tarball 不在 Git 历史中。没有 `gh` 时，可以克隆精确的 tag，再将其中已提交的 `lib/` 构建产物打成本地 `.tgz`：
+
+```sh
+VERSION=vX.Y.Z
+git clone --depth 1 --branch "$VERSION" https://github.com/OpenTritium/dsh-codex-shim.git
+cd dsh-codex-shim
+pnpm pack --pack-destination dist
+dsh plugin --profile web add ./dist/opentritium-dsh-codex-shim-*.tgz
+dsh --profile web --dump-config
+```
+
+**如果内置的 `gpt-5.6-*` 规则已经够用，无需阅读下面两个关于配置的小节。**
+
+### 通过配置文件配置
+
+无需修改 DSH 源码。settings provider 会将 `$DSH_HOME/settings.yaml`（通常是 `~/.dsh/settings.yaml`）中 `codex-shim` 分节叠加到 bundle 默认值之上。直接创建或编辑该分节；在显式填写 `modelPatterns` 之前，默认的 `gpt-5.6-*` 自动规则仍然生效。
 
 ```yaml
-opentritium-codex:
+codex-shim:
   enabled: true
   modelPatterns:
     - gpt-5.6-*
@@ -41,21 +66,21 @@ opentritium-codex:
 
 文件 settings provider 会监听合法的配置修改，因此路由策略会热更新。如果 profile 使用其他 settings provider，应通过该 provider 配置同一个 namespace。
 
-### 可选的 WebUI 设置卡
+### 补丁 WebUI 以提供可视化配置（可选）
 
 DSH `47f943859bef60e4160492346772ded9b24f765a` 尚不能让外部 bundle 将 settings namespace 暴露给 WebUI。不需要设置卡时，只安装 tarball 并按上面的 `settings.yaml` 配置即可。若希望获得更好的 GUI 设置体验，对应 Release 会附带 `deepseek-harness-settings-client-exposure-47f9438.patch`：这是一个不包含 OpenTritium 或 Codex 行为的通用 WebUI settings 白名单扩展。
 
 只在该精确、干净的 DSH commit 上应用 patch，重建 DSH 后再安装 Release tarball：
 
 ```sh
-gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
+gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
 git clone https://github.com/deepseek-ai/deepseek-harness.git deepseek-harness
 cd deepseek-harness
 git checkout 47f943859bef60e4160492346772ded9b24f765a
 git apply --check ../deepseek-harness-settings-client-exposure-47f9438.patch
 git apply ../deepseek-harness-settings-client-exposure-47f9438.patch
 pnpm install && pnpm run build
-pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-0.1.0.tgz
+pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-*.tgz
 pnpm dsh --profile web --dump-config
 ```
 
@@ -80,9 +105,7 @@ pnpm run build
 pnpm dsh --profile web --dump-config
 ```
 
-`dsh plugin remove` 会删除 profile 依赖和 bundle layer。若也要丢弃已经保存的 shim 偏好，请在停止 DSH 后，只删除 `$DSH_HOME/settings.yaml` 中的 `opentritium-codex:` 分节。
-
-profile 会先加载 `@deepseek-ai/dsh-base`，再加载本 bundle。模型凭据、provider 配置和环境变量应放在 profile 中。
+`dsh plugin remove` 会删除 profile 依赖和 bundle layer。若也要清理已保存的 shim 偏好，删除 `$DSH_HOME/settings.yaml` 中完整的 `codex-shim:` 分节即可；文件 settings provider 会热更新合法修改。
 
 ## 路由和配置
 
@@ -107,7 +130,7 @@ bundle 会全局挂载 gate，但只有同时满足以下条件时才应用 Code
 | `update_plan`  | 可用     | 持久化 `todo/write` session event     | 保存 `pending`、`in_progress`、`completed` 步骤，最多一个进行中步骤。                                                         |
 | `web_run`      | 仅搜索   | `ctx.web.search()`                    | 接收多个 `search_query` 并返回 provider 来源；不实现 `open`、`click`、`find`、截图或任意 fetch。                              |
 
-## 隐藏的上游工具
+## 被 Mask 的工具
 
 当替代工具存在时，gate 会从当前 prompt advertisement 中隐藏重叠的上游工具。它不会注销这些工具，因此路由切换或移除 shim 后，上游 surface 会恢复。
 
@@ -137,6 +160,7 @@ shim 只消费 capability 定义，不实现或选择 provider。实际 provider
 
 - **OpenAI Responses 网页抓取：** 新增独立的 DSH web 定义者/提供者，使用当前命中路由的 Responses 端点；只有 provider 真正支持时，才暴露网页引用、导航和抓取操作。不支持时继续保持 `web_run` 仅搜索。本 shim 不硬编码端点，也不加入 OpenAI hosted search provider。
 - **交互式终端：** 扩展通用 DSH shell 定义者和提供者，支持 stdin 写入、信号、session 列出/打开/关闭、PTY 行为和跨平台一致性；再升级 `write_stdin` 与 session 管理，不宣称尚未支持的操作。
+- **Windows 兼容性：** 在宣称支持 Windows 前，补充 Windows CI，覆盖 bundle 安装、profile 组合、已支持工具的行为和 WebUI 启动。
 - **Codex 行为对齐：** 对照参照版本检查工具 schema、参数校验、错误、生命周期、权限请求、transcript event 和 WebUI 展示；每项能力先补 composition 和 acceptance 测试，再扩大 surface。
 
 目标是在 DSH capability 之上尽可能接近 Codex 体验。Runtime、OAuth 和 Responses wire protocol 兼容仍不属于本包范围。

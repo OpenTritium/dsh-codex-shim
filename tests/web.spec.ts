@@ -37,4 +37,23 @@ describe('web_run', () => {
       truncated: false,
     })
   })
+
+  it('keeps batched searches grouped in the web card', () => {
+    const meta = webRunMetaFromValue({
+      results: [
+        { query: 'first', sources: [{ url: 'https://example.test/first' }], truncated: false },
+        { query: 'second', content: 'summary', sources: [{ url: 'https://example.test/second', title: 'Second' }], truncated: true },
+      ],
+    })
+    expect(presentWebRunResult({ search_query: [{ q: 'first' }, { q: 'second' }] }, {
+      content: [], isError: false, meta: meta as never,
+    })).toEqual({
+      card: 'web',
+      kind: 'searches',
+      results: [
+        { query: 'first', sources: [{ url: 'https://example.test/first' }], truncated: false },
+        { query: 'second', answer: 'summary', sources: [{ url: 'https://example.test/second', title: 'Second' }], truncated: true },
+      ],
+    })
+  })
 })

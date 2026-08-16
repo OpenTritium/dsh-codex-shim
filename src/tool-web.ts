@@ -80,6 +80,13 @@ interface WebRunMeta {
   results: Array<{ query: string; sources: WebRunSource[]; answer?: string; truncated: boolean }>
 }
 
+/** Grouped web-card arm supported by the current upstream client surface. */
+interface WebSearchesResultView {
+  card: 'web'
+  kind: 'searches'
+  results: Array<{ query: string; sources: WebRunSource[]; answer?: string; truncated: boolean }>
+}
+
 /**
  * Validate a deployment-controlled numeric bound.
  * @param field - configuration field being validated.
@@ -241,9 +248,8 @@ export function webRunMetaFromResult(meta: unknown): WebRunMeta | undefined {
 }
 
 /**
- * Present a settled single-query `web_run` as the host's standard web card.
- * Batched calls keep the generic text fallback so sources stay attributable to
- * their original query until the pinned host exports a grouped card type.
+ * Present a settled `web_run` as the host's standard web card. Batched calls
+ * use the grouped card so every source remains attributable to its query.
  * Error results and old logs without valid metadata keep the standard generic fallback.
  * @param _args - validated `web_run` arguments.
  * @param result - the durable model-facing result and projected metadata.
@@ -252,7 +258,19 @@ export function webRunMetaFromResult(meta: unknown): WebRunMeta | undefined {
 export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebSearchResultView | undefined {
   if (result.isError) return undefined
   const meta = webRunMetaFromResult(result.meta)
-  if (meta === undefined || meta.results.length !== 1) return undefined
+  if (meta === undefined) return undefined
+  if (meta.results.length > 1) {
+    return {
+      card: 'web',
+      kind: 'searches',
+      results: meta.results.map(search => ({
+        query: search.query,
+        sources: search.sources,
+        ...search.answer === undefined ? {} : { answer: search.answer },
+        truncated: search.truncated,
+      })),
+    } as WebSearchesResultView as unknown as WebSearchResultView
+  }
   const [search] = meta.results
   if (search === undefined) return undefined
   return {

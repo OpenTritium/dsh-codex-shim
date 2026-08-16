@@ -162,6 +162,11 @@
   padding: 8px 10px;
 }
 
+.webBody {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 .planItems {
   display: flex;
   flex-direction: column;

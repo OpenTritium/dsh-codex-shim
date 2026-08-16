@@ -32,6 +32,7 @@ const CODEX_TOOL_NAMES = [
   'apply_patch',
   'view_image',
   'update_plan',
+  'web_run',
 ] as const
 
 /**
@@ -49,7 +50,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('tool.call.toolview', function* () {
     for (const key of CODEX_TOOL_NAMES) {
       yield ctx.slots.register(
-        { name: 'tool.call.toolview', key, locale: NS },
+        { name: 'tool.call.toolview', key, locale: NS, ...key === 'web_run' ? { priority: -1 } : {} },
         key === 'view_image' ? ViewImageRow : CodexToolRow,
       )
     }

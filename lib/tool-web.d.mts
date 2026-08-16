@@ -96,9 +96,8 @@ declare function webRunMetaFromValue(value: WebRunValue): JsonValue;
  */
 declare function webRunMetaFromResult(meta: unknown): WebRunMeta | undefined;
 /**
- * Present a settled single-query `web_run` as the host's standard web card.
- * Batched calls keep the generic text fallback so sources stay attributable to
- * their original query until the pinned host exports a grouped card type.
+ * Present a settled `web_run` as the host's standard web card. Batched calls
+ * use the grouped card so every source remains attributable to its query.
  * Error results and old logs without valid metadata keep the standard generic fallback.
  * @param _args - validated `web_run` arguments.
  * @param result - the durable model-facing result and projected metadata.

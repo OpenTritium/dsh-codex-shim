@@ -7,12 +7,14 @@ import {
   IconApiOutline14,
   IconChecklistOutline14,
   IconEditOutline16,
+  IconGlobeOutline14,
   IconInspectOutline12,
   IconPaperclipOutline16,
   IconSparkle16,
   StateDot,
+  WebBlock,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DiffHunk } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { DiffHunk, WebBlockProps, WebSourceView } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ConversationSnapshot, ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
@@ -114,17 +116,19 @@ function iconFor(toolName: string): ReactNode {
     case 'apply_patch': return <IconEditOutline16 size={14} />
     case 'view_image': return <IconPaperclipOutline16 size={14} />
     case 'update_plan': return <IconChecklistOutline14 size={14} />
+    case 'web_run': return <IconGlobeOutline14 size={14} />
     default: return <IconSparkle16 size={14} />
   }
 }
 
-function titleKey(toolName: string): 'row.execCommand' | 'row.writeStdin' | 'row.applyPatch' | 'row.viewImage' | 'row.updatePlan' {
+function titleKey(toolName: string): 'row.execCommand' | 'row.writeStdin' | 'row.applyPatch' | 'row.viewImage' | 'row.updatePlan' | 'row.webRun' {
   switch (toolName) {
     case 'exec_command': return 'row.execCommand'
     case 'write_stdin': return 'row.writeStdin'
     case 'apply_patch': return 'row.applyPatch'
     case 'view_image': return 'row.viewImage'
     case 'update_plan': return 'row.updatePlan'
+    case 'web_run': return 'row.webRun'
     default: return 'row.execCommand'
   }
 }
@@ -143,8 +147,74 @@ function summaryFor(toolName: string, argsRaw: string, t: CodexToolRowProps['t']
       const plan = args?.plan
       return Array.isArray(plan) ? t('row.planSteps', { count: plan.length }) : t('row.plan')
     }
+    case 'web_run': {
+      const queries = args?.search_query
+      if (!Array.isArray(queries)) return t('row.webSearch')
+      const labels = queries.flatMap(query => {
+        if (typeof query !== 'object' || query === null || Array.isArray(query)) return []
+        const value = (query as Record<string, unknown>).q
+        return typeof value === 'string' && value.trim() !== '' ? [firstLine(value.trim())] : []
+      })
+      return labels.length === 0 ? t('row.webSearch') : `${labels[0]}${labels.length > 1 ? ` +${labels.length - 1}` : ''}`
+    }
     default: return firstLine(argsRaw)
   }
+}
+
+type CodexWebBlockProps = WebBlockProps | {
+  kind: 'searches'
+  results: Array<{ query: string; sources: WebSourceView[]; answer?: string; truncated: boolean }>
+}
+
+function webSource(value: unknown): WebSourceView | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const source = value as Record<string, unknown>
+  if (typeof source.url !== 'string') return undefined
+  if (source.title !== undefined && typeof source.title !== 'string') return undefined
+  if (source.snippet !== undefined && typeof source.snippet !== 'string') return undefined
+  if (source.publishedAt !== undefined && typeof source.publishedAt !== 'string') return undefined
+  return {
+    url: source.url,
+    ...source.title === undefined ? {} : { title: source.title },
+    ...source.snippet === undefined ? {} : { snippet: source.snippet },
+    ...source.publishedAt === undefined ? {} : { publishedAt: source.publishedAt },
+  }
+}
+
+function webCardFromBlock(block: ToolCallBlock): CodexWebBlockProps | undefined {
+  if (!('kind' in block) || block.resultView?.card !== 'web') return undefined
+  const view = block.resultView as unknown as Record<string, unknown>
+  if (view.kind === 'search') {
+    if (!Array.isArray(view.sources) || typeof view.truncated !== 'boolean') return undefined
+    const sources = view.sources.map(webSource)
+    if (sources.some(source => source === undefined)) return undefined
+    if (view.answer !== undefined && typeof view.answer !== 'string') return undefined
+    return {
+      kind: 'search',
+      sources: sources as WebSourceView[],
+      truncated: view.truncated,
+      ...view.answer === undefined ? {} : { answer: view.answer },
+    }
+  }
+  if (view.kind === 'searches' && Array.isArray(view.results)) {
+    const results = view.results.map(group => {
+      if (typeof group !== 'object' || group === null || Array.isArray(group)) return undefined
+      const item = group as Record<string, unknown>
+      if (typeof item.query !== 'string' || item.query.trim() === '' || typeof item.truncated !== 'boolean' || !Array.isArray(item.sources)) return undefined
+      const sources = item.sources.map(webSource)
+      if (sources.some(source => source === undefined)) return undefined
+      if (item.answer !== undefined && typeof item.answer !== 'string') return undefined
+      return {
+        query: item.query,
+        sources: sources as WebSourceView[],
+        truncated: item.truncated,
+        ...item.answer === undefined ? {} : { answer: item.answer },
+      }
+    })
+    if (results.some(result => result === undefined)) return undefined
+    return { kind: 'searches', results: results as Array<{ query: string; sources: WebSourceView[]; answer?: string; truncated: boolean }> }
+  }
+  return undefined
 }
 
 function stateLabel(state: CodexRowState, t: CodexToolRowProps['t']): string | null {
@@ -264,10 +334,11 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader, useSess
   const workdir = toolName === 'exec_command' ? stringArg(args, 'workdir') : undefined
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
   const plan = toolName === 'update_plan' ? parsePlanPresentation(argsRaw) : undefined
+  const web = toolName === 'web_run' ? webCardFromBlock(block) : undefined
   const planItems = useSession(snapshot =>
     plan === undefined ? [] : relevantPlanItems(snapshot, block.callId, plan))
-  const showRawPanels = toolName !== 'view_image' && plan === undefined
-  const expandable = diff !== null || image !== undefined || plan !== undefined || (showRawPanels && (argsRaw !== '' || output !== null))
+  const showRawPanels = toolName !== 'view_image' && plan === undefined && web === undefined
+  const expandable = diff !== null || image !== undefined || plan !== undefined || web !== undefined || (showRawPanels && (argsRaw !== '' || output !== null))
   const open = expanded && expandable
   const outputSummary = state === 'error' && output !== null
     ? firstLine(terminalOutput?.stderr || terminalOutput?.stdout || output)
@@ -368,6 +439,7 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader, useSess
               </div>
             </section>
           ) : null}
+          {diff === null && web !== undefined ? <WebBlock {...web as WebBlockProps} className={css.webBody} /> : null}
           {diff === null && plan !== undefined ? (
             <section className={css.planCard} aria-label={t('row.plan')}>
               <span className={css.ioLabel}>{t('row.plan')}</span>

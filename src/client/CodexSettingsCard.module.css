@@ -27,18 +27,29 @@
 .reset:hover:not(:disabled) { color: var(--dsw-alias-label-primary); }
 .reset:disabled { cursor: default; opacity: .5; }
 .status { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.5; }
+.addButton { display: inline-flex; flex: none; align-items: center; gap: 4px; border: 0; padding: 0; background: none; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; line-height: 1.5; cursor: pointer; white-space: nowrap; }
+.addButton:hover:not(:disabled) { color: var(--dsw-alias-label-primary); }
+.addButton:disabled { cursor: default; opacity: .5; }
+.addModel { display: flex; align-items: center; gap: 8px; }
+.selectInput { flex: 1; min-width: 0; resize: none; }
+.visuallyHidden { position: absolute; overflow: hidden; width: 1px; height: 1px; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .models { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .model { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; }
 .modelIdentity { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
 .modelName { overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .providerName { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.modelActions { display: inline-flex; flex: none; align-items: center; gap: 6px; }
 .decisions { display: inline-flex; flex: none; overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; }
 .decision { border: 0; border-left: 1px solid var(--dsw-alias-border-l2); padding: 4px 8px; background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; line-height: 1.5; cursor: pointer; white-space: nowrap; }
 .decision:first-child { border-left: 0; }
 .decision:hover:not(:disabled) { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2); }
 .decisionSelected { background: var(--dsw-alias-label-primary); color: var(--dsw-alias-bg-layer-3); }
 .decision:disabled { cursor: default; opacity: .5; }
-@media (max-width: 640px) { .model { align-items: stretch; flex-direction: column; } .decisions { align-self: stretch; } .decision { flex: 1; } }
+.removeButton { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 4px; background: none; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.removeButton:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+.removeButton:focus-visible, .addButton:focus-visible, .decision:focus-visible, .removeButton:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
+.removeButton:disabled { cursor: default; opacity: .5; }
+@media (max-width: 640px) { .model { align-items: stretch; flex-direction: column; } .modelActions, .decisions { align-self: stretch; } .decision { flex: 1; } .addModel { align-items: stretch; flex-direction: column; } .addModel .reset { align-self: flex-end; } }
 .footer { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-3); }
 .button { border: 1px solid transparent; border-radius: 6px; padding: 5px 12px; background: var(--dsw-alias-label-primary); color: var(--dsw-alias-bg-layer-3); font: inherit; font-size: 13px; cursor: pointer; }
 .button:first-child { border-color: var(--dsw-alias-border-l2); background: none; color: var(--dsw-alias-label-secondary); }

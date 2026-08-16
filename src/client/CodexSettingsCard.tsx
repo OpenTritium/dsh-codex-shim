@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronDownOutline14, IconPlusOutline16, IconTrashOutline16, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { CodexSettingsCardController, CodexSettingsState, ModelDecision } from './settings-card-controller.ts'
+import type { CodexSettingsCardController, CodexSettingsState, ModelOverrideDecision } from './settings-card-controller.ts'
 import css from './CodexSettingsCard.module.css'
 
 export interface CodexSettingsCardFace {
   hooks: { codexSettings: import('@deepseek-ai/dsh-client-runtime/client').SnapshotStore<CodexSettingsState> }
   edit: (field: 'enabled' | 'modelPatterns', text: string) => void
-  setModelDecision: (provider: string, model: string, decision: ModelDecision) => void
+  setModelDecision: (provider: string, model: string, decision: ModelOverrideDecision) => void
+  addModelException: (provider: string, model: string) => void
+  removeModelException: (provider: string, model: string) => void
   reset: (field: 'enabled' | 'modelPatterns' | 'modelOverrides') => void
   save: () => void
   discard: () => void
@@ -18,6 +20,7 @@ type Props = PropsRuntime<'settings.plugin.item'> & PropsLocale<'codex'> & Injec
 /** Render the OpenTritium Code simulation settings card. */
 export function CodexSettingsCard(props: Props) {
   const [open, setOpen] = useState(false)
+  const [addingModel, setAddingModel] = useState(false)
   const state = props.useCodexSettings(snapshot => snapshot)
   if (!state.available) return null
   const field = (key: 'enabled' | 'modelPatterns') => state[key]
@@ -37,13 +40,14 @@ export function CodexSettingsCard(props: Props) {
       </div>
       <div className={css.field}><div className={css.fieldHead}><label className={css.label} htmlFor="codex-model-patterns">{props.t('settings.patterns')}</label>{field('modelPatterns').overridden ? <button type="button" className={css.reset} disabled={disabled} onClick={() => props.reset('modelPatterns')}>{props.t('settings.reset')}</button> : null}</div><textarea id="codex-model-patterns" rows={2} className={field('modelPatterns').invalid ? css.inputInvalid : css.input} value={field('modelPatterns').text} disabled={disabled} onChange={event => props.edit('modelPatterns', event.target.value)} /><p className={css.hint}>{props.t('settings.patternsHint')}</p></div>
       <div className={css.field}>
-        <div className={css.fieldHead}><span className={css.label}>{props.t('settings.models')}</span>{state.modelOverridesOverridden ? <button type="button" className={css.reset} disabled={disabled} onClick={() => props.reset('modelOverrides')}>{props.t('settings.reset')}</button> : null}</div>
+        <div className={css.fieldHead}><span className={css.label}>{props.t('settings.models')}</span>{state.modelOverridesOverridden ? <button type="button" className={css.reset} disabled={disabled} onClick={() => props.reset('modelOverrides')}>{props.t('settings.reset')}</button> : null}<button type="button" className={css.addButton} disabled={disabled || state.modelsStatus !== 'ready' || state.addableModels.length === 0} onClick={() => setAddingModel(true)}><IconPlusOutline16 size={14} />{props.t('settings.modelsAdd')}</button></div>
         <p className={css.hint}>{props.t('settings.modelsHint')}</p>
         {state.modelsStatus === 'loading' ? <p className={css.status}>{props.t('settings.modelsLoading')}</p> : null}
         {state.modelsStatus === 'error' ? <p className={css.error} role="status">{props.t('settings.modelsFailed')}: {state.modelsError}</p> : null}
-        {state.modelsStatus === 'ready' ? <ul className={css.models}>{state.models.map(row => <li className={css.model} key={`${row.provider}:${row.model}`}><div className={css.modelIdentity}><span className={css.modelName}>{row.modelName}</span><span className={css.providerName}>{row.providerName}</span></div><div className={css.decisions} role="radiogroup" aria-label={`${row.providerName} / ${row.modelName}`}>
-          {(['default', 'enabled', 'disabled'] as const).map(decision => <button type="button" className={`${css.decision} ${row.decision === decision ? css.decisionSelected : ''}`} aria-pressed={row.decision === decision} disabled={disabled} key={decision} onClick={() => props.setModelDecision(row.provider, row.model, decision)}>{props.t(`settings.decision.${decision}`)}</button>)}
-        </div></li>)}</ul> : null}
+        {addingModel && state.modelsStatus === 'ready' ? <div className={css.addModel}><label className={css.visuallyHidden} htmlFor="codex-model-exception">{props.t('settings.modelsPick')}</label><select id="codex-model-exception" className={`${css.input} ${css.selectInput}`} autoFocus defaultValue="" disabled={disabled} onChange={event => { const selected = state.addableModels.find(row => modelKey(row.provider, row.model) === event.target.value); if (selected === undefined) return; props.addModelException(selected.provider, selected.model); setAddingModel(false) }}><option value="" disabled>{props.t('settings.modelsPick')}</option>{state.addableModels.map(row => <option key={modelKey(row.provider, row.model)} value={modelKey(row.provider, row.model)}>{row.providerName} / {row.modelName}</option>)}</select><button type="button" className={css.reset} disabled={disabled} onClick={() => setAddingModel(false)}>{props.t('settings.cancel')}</button></div> : null}
+        {state.models.length === 0 && state.modelsStatus !== 'loading' ? <p className={css.status}>{props.t('settings.modelsEmpty')}</p> : <ul className={css.models}>{state.models.map(row => <li className={css.model} key={modelKey(row.provider, row.model)}><div className={css.modelIdentity}><span className={css.modelName}>{row.modelName}</span><span className={css.providerName}>{row.providerName}</span></div><div className={css.modelActions}><div className={css.decisions} role="radiogroup" aria-label={`${row.providerName} / ${row.modelName}`}>
+          {(['enabled', 'disabled'] as const).map(decision => <button type="button" className={`${css.decision} ${row.decision === decision ? css.decisionSelected : ''}`} aria-pressed={row.decision === decision} disabled={disabled} key={decision} onClick={() => props.setModelDecision(row.provider, row.model, decision)}>{props.t(`settings.decision.${decision}`)}</button>)}
+        </div><Tooltip label={props.t('settings.modelsRemove')}><button type="button" className={css.removeButton} aria-label={`${props.t('settings.modelsRemove')}: ${row.providerName} / ${row.modelName}`} disabled={disabled} onClick={() => props.removeModelException(row.provider, row.model)}><IconTrashOutline16 size={14} /></button></Tooltip></div></li>)}</ul>}
       </div>
     </div> : null}
   </li>
@@ -54,8 +58,14 @@ export function cardFace(controller: CodexSettingsCardController): CodexSettings
     hooks: { codexSettings: controller.getStore() },
     edit: (field, text) => controller.edit(field, text),
     setModelDecision: (provider, model, decision) => controller.setModelDecision(provider, model, decision),
+    addModelException: (provider, model) => controller.addModelException(provider, model),
+    removeModelException: (provider, model) => controller.removeModelException(provider, model),
     reset: field => controller.reset(field),
     save: () => { void controller.save() },
     discard: () => controller.discard(),
   }
+}
+
+function modelKey(provider: string, model: string): string {
+  return JSON.stringify([provider, model])
 }

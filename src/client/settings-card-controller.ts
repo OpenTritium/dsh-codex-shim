@@ -6,13 +6,19 @@ export const CODEX_SETTINGS_NS = 'opentritium-codex'
 
 export interface ModelOverride { provider: string; model: string; enabled: boolean }
 export interface CodexSettings { enabled?: boolean; modelPatterns?: string[]; modelOverrides?: ModelOverride[] }
-export type ModelDecision = 'default' | 'enabled' | 'disabled'
+export type ModelOverrideDecision = 'enabled' | 'disabled'
 export interface CodexModelRow {
   provider: string
   providerName: string
   model: string
   modelName: string
-  decision: ModelDecision
+  decision: ModelOverrideDecision
+}
+export interface CodexModelOption {
+  provider: string
+  providerName: string
+  model: string
+  modelName: string
 }
 export interface FieldState { text: string; overridden: boolean; invalid: boolean }
 export interface CodexSettingsState {
@@ -27,6 +33,7 @@ export interface CodexSettingsState {
   modelsStatus: 'loading' | 'ready' | 'error'
   modelsError: string | undefined
   models: readonly CodexModelRow[]
+  addableModels: readonly CodexModelOption[]
 }
 
 function validOverrides(value: unknown): value is ModelOverride[] {
@@ -48,19 +55,39 @@ function formatPatterns(value: unknown): string {
   return Array.isArray(value) ? value.join('\n') : ''
 }
 
-function modelDecision(overrides: readonly ModelOverride[], provider: string, model: string): ModelDecision {
-  const override = overrides.find(item => item.provider === provider && item.model === model)
-  return override === undefined ? 'default' : override.enabled ? 'enabled' : 'disabled'
+function modelKey(provider: string, model: string): string {
+  return JSON.stringify([provider, model])
 }
 
 function modelRows(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelRow[] {
-  return groups.flatMap(group => group.models.map(model => ({
-    provider: group.id,
-    providerName: group.name,
-    model: model.id,
-    modelName: model.name,
-    decision: modelDecision(overrides, group.id, model.id),
-  })))
+  const known = new Map(groups.flatMap(group => group.models.map(model => [
+    modelKey(group.id, model.id),
+    { providerName: group.name, modelName: model.name },
+  ])))
+  return overrides.map(override => {
+    const labels = known.get(modelKey(override.provider, override.model))
+    return {
+      provider: override.provider,
+      providerName: labels?.providerName ?? override.provider,
+      model: override.model,
+      modelName: labels?.modelName ?? override.model,
+      decision: override.enabled ? 'enabled' : 'disabled',
+    }
+  })
+}
+
+function addableModels(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelOption[] {
+  const overridden = new Set(overrides.map(override => modelKey(override.provider, override.model)))
+  return groups.flatMap(group => group.models
+    .filter(model => !overridden.has(modelKey(group.id, model.id)))
+    .map(model => ({ provider: group.id, providerName: group.name, model: model.id, modelName: model.name })))
+}
+
+function sameOverrides(left: readonly ModelOverride[], right: readonly ModelOverride[]): boolean {
+  return left.length === right.length && left.every((item, index) => {
+    const other = right[index]
+    return other !== undefined && item.provider === other.provider && item.model === other.model && item.enabled === other.enabled
+  })
 }
 
 /** Owns staged edits, model-directory loading, and persistence for the Codex settings card. */
@@ -106,8 +133,19 @@ export class CodexSettingsCardController {
   private overrides(): ModelOverride[] {
     if (this.cleared.has('modelOverrides')) return []
     if (this.draftOverrides !== undefined) return this.draftOverrides
+    return this.configuredOverrides()
+  }
+
+  private configuredOverrides(): ModelOverride[] {
     const configured = this.current().modelOverrides
     return validOverrides(configured) ? configured : []
+  }
+
+  private stageOverrides(next: ModelOverride[]): void {
+    this.draftOverrides = sameOverrides(next, this.configuredOverrides()) ? undefined : next
+    this.cleared.delete('modelOverrides')
+    this.failed = false
+    this.publish()
   }
 
   private snapshot(): CodexSettingsState {
@@ -125,6 +163,7 @@ export class CodexSettingsCardController {
       modelsStatus: this.modelsStatus,
       modelsError: this.modelsError,
       models: modelRows(this.groups, overrides),
+      addableModels: addableModels(this.groups, overrides),
     }
   }
 
@@ -153,14 +192,22 @@ export class CodexSettingsCardController {
     this.publish()
   }
 
-  setModelDecision(provider: string, model: string, decision: ModelDecision): void {
-    if (modelDecision(this.overrides(), provider, model) === decision) return
+  setModelDecision(provider: string, model: string, decision: ModelOverrideDecision): void {
+    if (this.overrides().find(item => item.provider === provider && item.model === model)?.enabled === (decision === 'enabled')) return
     const next = this.overrides().filter(item => item.provider !== provider || item.model !== model)
-    if (decision !== 'default') next.push({ provider, model, enabled: decision === 'enabled' })
-    this.draftOverrides = next
-    this.cleared.delete('modelOverrides')
-    this.failed = false
-    this.publish()
+    next.push({ provider, model, enabled: decision === 'enabled' })
+    this.stageOverrides(next)
+  }
+
+  addModelException(provider: string, model: string): void {
+    if (this.overrides().some(item => item.provider === provider && item.model === model)) return
+    this.stageOverrides([...this.overrides(), { provider, model, enabled: true }])
+  }
+
+  removeModelException(provider: string, model: string): void {
+    const next = this.overrides().filter(item => item.provider !== provider || item.model !== model)
+    if (next.length === this.overrides().length) return
+    this.stageOverrides(next)
   }
 
   reset(field: 'enabled' | 'modelPatterns' | 'modelOverrides'): void {

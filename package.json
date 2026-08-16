@@ -53,13 +53,13 @@
     "build": "tsdown",
     "prepare": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run tests",
     "bench": "vitest bench tests/performance.bench.ts",
     "format": "oxfmt --write src tests \"src/**/*.css\" package.json tsconfig.json tsdown.config.ts oxlint.json .oxfmtrc.json",
     "format:check": "oxfmt --check src tests \"src/**/*.css\" package.json tsconfig.json tsdown.config.ts oxlint.json .oxfmtrc.json",
     "lint": "oxlint --config oxlint.json src tests",
     "lint:fix": "oxlint --config oxlint.json --fix src tests",
-    "check": "oxfmt --check src tests \"src/**/*.css\" package.json tsconfig.json tsdown.config.ts oxlint.json .oxfmtrc.json && oxlint --config oxlint.json src tests && tsc --noEmit -p tsconfig.json && vitest run && tsdown"
+    "check": "oxfmt --check src tests \"src/**/*.css\" package.json tsconfig.json tsdown.config.ts oxlint.json .oxfmtrc.json && oxlint --config oxlint.json src tests && tsc --noEmit -p tsconfig.json && vitest run tests && tsdown"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"

@@ -97,7 +97,7 @@ export function CodexSettingsCard(props: Props) {
               id="codex-model-patterns"
               rows={2}
               placeholder={props.t('settings.patternsPlaceholder')}
-              className={field('modelPatterns').invalid ? css.inputInvalid : css.input}
+              className={`${css.input} ${field('modelPatterns').invalid ? css.inputInvalid : ''}`}
               value={field('modelPatterns').text}
               disabled={disabled}
               onChange={event => props.edit('modelPatterns', event.target.value)}

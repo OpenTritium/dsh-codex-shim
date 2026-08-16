@@ -14,23 +14,14 @@ describe('splitTerminalOutput', () => {
   })
 
   it('handles stderr-only output immediately after the output marker', () => {
-    expect(splitTerminalOutput('Output:\n[stderr]\nwarning\n')).toEqual({
-      stdout: '',
-      stderr: 'warning\n',
-    })
+    expect(splitTerminalOutput('Output:\n[stderr]\nwarning\n')).toEqual({ stdout: '', stderr: 'warning\n' })
   })
 
   it('keeps an unwrapped program line that happens to contain Output:', () => {
-    expect(splitTerminalOutput('hello\nOutput:\nworld\n')).toEqual({
-      stdout: 'hello\nOutput:\nworld\n',
-      stderr: '',
-    })
+    expect(splitTerminalOutput('hello\nOutput:\nworld\n')).toEqual({ stdout: 'hello\nOutput:\nworld\n', stderr: '' })
   })
 
   it('does not infer stderr from an unwrapped program marker', () => {
-    expect(splitTerminalOutput('hello\n[stderr]\nworld\n')).toEqual({
-      stdout: 'hello\n[stderr]\nworld\n',
-      stderr: '',
-    })
+    expect(splitTerminalOutput('hello\n[stderr]\nworld\n')).toEqual({ stdout: 'hello\n[stderr]\nworld\n', stderr: '' })
   })
 })

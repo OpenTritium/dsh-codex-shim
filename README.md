@@ -57,17 +57,18 @@ headless、部分 WebUI 或不同 profile composition 不会因为缺少可选�
 
 ## 兼容性
 
-| 项目             | 兼容范围或基线                                                                                                                          |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| DeepSeek Harness | 针对官方上游 commit `47f943859bef60e4160492346772ded9b24f765a` 验证，源码包版本为 `0.1.0-rc.5` 系列；peer range 保留在 `<0.2.0`。       |
-| Codex 参照实现   | `@openai/codex` / `codex-cli 0.147.0`；该版本用于工具名、`apply_patch` 行为和 app-server 产品测试基线，不表示本 shim 实现了完整 Codex。 |
-| Node.js          | `^22.19.0` 或 `>=24.0.0`。                                                                                                             |
-| React/WebUI      | React 18；浏览器功能通过 DSH client slots、locale、settings transport 等公开接口接入。                                                  |
-| 平台             | prompt、plan、web、UI 以及统一 `exec_command` / `write_stdin` 使用 DSH 当前平台的 shell provider；`write_stdin` 仍只支持轮询。 |
+| 项目 | 兼容范围或基线 |
+| --- | --- |
+| DeepSeek Harness | 基线是官方上游 commit `47f943859bef60e4160492346772ded9b24f765a` 对应的 `0.1.0-rc.5`；允许同一 `0.1.x` 系列的兼容更新。 |
+| DSH 共享 API | 所有 `@deepseek-ai/dsh-*` peer dependency 使用 `^0.1.0-rc.5`，`@deepseek-ai/cordis` 使用 `^4.0.1`，避免引入第二个 Cordis runtime。 |
+| Schemastery | `@deepseek-ai/schemastery` 为普通运行时依赖，基线为 `^3.18.1`。 |
+| 构建与测试 | Node types `22.20.0`、Lightning CSS `1.32.0`、Oxlint `1.76.0`、tsdown `0.22.2`、TypeScript `6.0.3`、Vitest `4.1.8`；浏览器客户端经 Rolldown 压缩并保留 source map，服务端入口保持可读；Oxfmt 是 shim 独有的开发工具。 |
+| Codex 参照实现 | `@openai/codex` / `codex-cli 0.147.0`；该版本用于工具名、`apply_patch` 行为和 app-server 产品测试基线，不表示本 shim 实现了完整 Codex。 |
+| Node.js | `^22.19.0` 或 `>=24.0.0`。 |
+| React/WebUI | React 18；浏览器功能通过 DSH client slots、locale、settings transport 等公开接口接入。 |
+| 平台 | prompt、plan、web、UI 以及统一 `exec_command` / `write_stdin` 使用 DSH 当前平台的 shell provider；`write_stdin` 仍只支持轮询。 |
 
-升级上游 Harness 或 Codex 参照版本时，需要重新检查工具 schema、prompt 片段、
-approval/sandbox 字段和 WebUI slot contract，并重新运行本插件的组合测试；当前
-版本不声称跟踪 Codex `latest`。
+DSH 仍处于预发布阶段。本包的 peer range 接受 `0.1.x` 中与基线兼容的更新，但每个 shim 版本只对表中基线做组合验证；`0.2.0`、Cordis major 升级或公开 seam 变更需要新的 shim 版本。升级上游 Harness 后，应重新检查工具 schema、prompt 片段、approval/sandbox 字段与 WebUI slot contract，并运行本插件的组合测试；当前版本不跟踪 DSH 或 Codex `latest`。
 
 ## 安装和 profile 组合
 

@@ -176,12 +176,7 @@ async function drainWindow(
   proc: ShellProcess,
   yieldMs: number,
   signal: AbortSignal,
-): Promise<{
-  output: string
-  settled: boolean
-  lossy: boolean
-  spillPaths: string[]
-}> {
+): Promise<{ output: string; settled: boolean; lossy: boolean; spillPaths: string[] }> {
   const started = Date.now()
   // A box keeps the closure assignment out of the control-flow narrowing that
   // would otherwise read the local's initial literal for the whole loop.
@@ -199,7 +194,7 @@ async function drainWindow(
     if (read.stderrSpillPath !== undefined) spillPaths.add(read.stderrSpillPath)
   }
   while (!state.settled && !signal.aborted && Date.now() - started < yieldMs) {
-    await Promise.race([done, new Promise((resolve) => setTimeout(resolve, POLL_TICK_MS))])
+    await Promise.race([done, new Promise(resolve => setTimeout(resolve, POLL_TICK_MS))])
     consume(proc.readOutput())
   }
   consume(proc.readOutput())
@@ -328,10 +323,7 @@ function makePatchIo(
   }
 }
 
-function recordingPatchIo(io: ApplyPatchIo): {
-  io: ApplyPatchIo
-  changes: () => PatchFileChange[]
-} {
+function recordingPatchIo(io: ApplyPatchIo): { io: ApplyPatchIo; changes: () => PatchFileChange[] } {
   interface Preimage {
     path: string
     before: string | undefined
@@ -341,7 +333,7 @@ function recordingPatchIo(io: ApplyPatchIo): {
   const keyOf = (path: string, workdir: string): string => resolvePath(workdir, path)
   const optionalPreimage = (path: string, workdir: string): Promise<string | undefined> =>
     io.readText(path, workdir).then(
-      (value) => value,
+      value => value,
       () => undefined,
     )
   const recordBefore = (path: string, workdir: string, before: string | undefined): Preimage => {
@@ -362,22 +354,14 @@ function recordingPatchIo(io: ApplyPatchIo): {
         const existing = preimages.get(key)
         const change = existing ?? recordBefore(path, workdir, await optionalPreimage(path, workdir))
         await io.writeText(path, workdir, content)
-        applied.set(key, {
-          path,
-          ...(change.before === undefined ? {} : { before: change.before }),
-          after: content,
-        })
+        applied.set(key, { path, ...(change.before === undefined ? {} : { before: change.before }), after: content })
       },
       async remove(path, workdir) {
         const key = keyOf(path, workdir)
         const existing = preimages.get(key)
         const change = existing ?? recordBefore(path, workdir, await optionalPreimage(path, workdir))
         await io.remove(path, workdir)
-        applied.set(key, {
-          path,
-          ...(change.before === undefined ? {} : { before: change.before }),
-          after: '',
-        })
+        applied.set(key, { path, ...(change.before === undefined ? {} : { before: change.before }), after: '' })
       },
       async moveText(from, to, workdir, content) {
         const sourceKey = keyOf(from, workdir)
@@ -398,7 +382,7 @@ function recordingPatchIo(io: ApplyPatchIo): {
 }
 
 function patchDiffs(changes: readonly PatchFileChange[]): FileDiff[] {
-  return changes.flatMap((change) =>
+  return changes.flatMap(change =>
     change.before === undefined
       ? [{ path: change.path, oldText: null, newText: change.after }]
       : computeHunkDiffs(change.path, change.before, change.after),
@@ -436,11 +420,7 @@ async function runIntercepted(
   const startedAt = Date.now()
   try {
     const output = await applyPatchInput(runtime, fs, invocation.patch, baseCwd, policy, signal, invocation.workdir)
-    return {
-      chunkId: newChunkId(),
-      wallTimeSeconds: (Date.now() - startedAt) / 1000,
-      output: output.summary,
-    }
+    return { chunkId: newChunkId(), wallTimeSeconds: (Date.now() - startedAt) / 1000, output: output.summary }
   } catch (error: unknown) {
     rethrowUpstream(error)
   }
@@ -476,28 +456,18 @@ function presentApplyPatchCall(args: ApplyPatchArgs): DiffCallView | GenericCall
   try {
     const parsed = parsePatch(args.input)
     const locations = [
-      ...new Set(parsed.ops.map((op) => (op.kind === 'update' && op.moveTo !== undefined ? op.moveTo : op.path))),
-    ].map((path) => ({ path }))
-    const diffs = parsed.ops.flatMap<FileDiff>((op) => {
+      ...new Set(parsed.ops.map(op => (op.kind === 'update' && op.moveTo !== undefined ? op.moveTo : op.path))),
+    ].map(path => ({ path }))
+    const diffs = parsed.ops.flatMap<FileDiff>(op => {
       if (op.kind === 'add') {
-        return [{ path: op.path, oldText: null, newText: op.lines.map((line) => `${line}\n`).join('') }]
+        return [{ path: op.path, oldText: null, newText: op.lines.map(line => `${line}\n`).join('') }]
       }
       if (op.kind === 'delete') return []
       const path = op.moveTo ?? op.path
-      return op.chunks.map((chunk) => ({
-        path,
-        oldText: chunk.oldLines.join('\n'),
-        newText: chunk.newLines.join('\n'),
-      }))
+      return op.chunks.map(chunk => ({ path, oldText: chunk.oldLines.join('\n'), newText: chunk.newLines.join('\n') }))
     })
     if (diffs.length === 0) {
-      return {
-        card: 'generic',
-        title: 'Apply patch',
-        kind: 'edit',
-        rawInput: args.input,
-        locations,
-      }
+      return { card: 'generic', title: 'Apply patch', kind: 'edit', rawInput: args.input, locations }
     }
     return { card: 'diff', title: 'Apply patch', diffs, locations }
   } catch {
@@ -517,12 +487,7 @@ function presentApplyPatchResult(_args: ApplyPatchArgs, result: ToolResult): Dif
  * @returns the generic image-read card.
  */
 function presentViewImageCall(args: ViewImageArgs): GenericCallView {
-  return {
-    card: 'generic',
-    title: `View image ${args.path}`,
-    kind: 'read',
-    locations: [{ path: args.path }],
-  }
+  return { card: 'generic', title: `View image ${args.path}`, kind: 'read', locations: [{ path: args.path }] }
 }
 
 /**
@@ -533,10 +498,7 @@ export function apply(ctx: Context): void {
   const runtime: ExecRuntime = { ctx, sessions: new ExecSessionRegistry() }
   ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
     const assembled = await next()
-    return {
-      ...assembled,
-      tools: assembled.tools.filter((tool) => !APPLY_PATCH_ALIASES.has(tool.name)),
-    }
+    return { ...assembled, tools: assembled.tools.filter(tool => !APPLY_PATCH_ALIASES.has(tool.name)) }
   })
   const defaultMode = ctx.shell.sandboxMode
   const escalationModes: readonly SandboxMode[] = defaultMode === undefined ? [] : ESCALATION_TARGETS
@@ -624,11 +586,7 @@ export function apply(ctx: Context): void {
           },
           render: (_args, value) => [{ type: 'text', text: value.summary }],
           presentationMeta: (_args, value) => ({
-            diffs: patchDiffs(value.changes).map(({ path, oldText, newText }) => ({
-              path,
-              oldText,
-              newText,
-            })),
+            diffs: patchDiffs(value.changes).map(({ path, oldText, newText }) => ({ path, oldText, newText })),
           }),
         },
         async execute(args: ApplyPatchArgs, exec) {
@@ -657,14 +615,12 @@ export function apply(ctx: Context): void {
     )
   }
 
-  ctx.inject(['attachments', 'fs'], (imageCtx) => {
+  ctx.inject(['attachments', 'fs'], imageCtx => {
     imageCtx.tools.register(
       defineTool({
         name: 'view_image',
         description: 'View an image from the local filesystem. The image is added to the model context.',
-        parameters: {
-          path: { type: 'string', required: true, description: 'Path to the image file.' },
-        },
+        parameters: { path: { type: 'string', required: true, description: 'Path to the image file.' } },
         output: {
           schema: {
             type: 'object',
@@ -704,10 +660,7 @@ export function apply(ctx: Context): void {
       description: 'Runs a shell command over pipes, returning output or a session ID for ongoing interaction.',
       parameters: {
         cmd: { type: 'string', required: true, description: 'Shell command to execute.' },
-        workdir: {
-          type: 'string',
-          description: 'Working directory for the command. Defaults to the turn cwd.',
-        },
+        workdir: { type: 'string', description: 'Working directory for the command. Defaults to the turn cwd.' },
         yield_time_ms: {
           type: 'number',
           description: 'Wait before yielding output. Defaults to 10000 ms; effective range is 250-30000 ms.',
@@ -803,11 +756,7 @@ export function apply(ctx: Context): void {
       description:
         'Polls a running unified exec session and returns recent output. The pinned upstream shell capability does not yet expose interactive stdin writes.',
       parameters: {
-        session_id: {
-          type: 'integer',
-          required: true,
-          description: 'Identifier of the running unified exec session.',
-        },
+        session_id: { type: 'integer', required: true, description: 'Identifier of the running unified exec session.' },
         chars: {
           type: 'string',
           description: 'Bytes to write to stdin. Defaults to empty, which polls without writing.',

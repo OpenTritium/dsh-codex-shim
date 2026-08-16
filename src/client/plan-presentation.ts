@@ -26,8 +26,8 @@ export function changedPlanItems(
   previous: readonly PlanItemPresentation[] | undefined,
 ): PlanItemPresentation[] {
   if (previous === undefined) return [...current]
-  const previousStatuses = new Map(previous.map((item) => [item.step, item.status]))
-  const changed = current.filter((item) => previousStatuses.get(item.step) !== item.status)
+  const previousStatuses = new Map(previous.map(item => [item.step, item.status]))
+  const changed = current.filter(item => previousStatuses.get(item.step) !== item.status)
   return changed.length === 0 ? [...current] : changed
 }
 

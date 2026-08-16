@@ -43,11 +43,9 @@ export default defineConfig([
     target: 'es2024',
     dts: true,
     sourcemap: true,
+    minify: true,
     clean: false,
-    deps: {
-      neverBundle: CLIENT_EXTERNALS,
-      alwaysBundle: (id) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
-    },
+    deps: { neverBundle: CLIENT_EXTERNALS, alwaysBundle: id => (CLIENT_EXTERNALS.includes(id) ? undefined : true) },
     plugins: [
       {
         name: 'opentritium-css-modules',

@@ -24,11 +24,7 @@ interface WriteStdinCallArgs {
  * @returns the terminal call view.
  */
 export function presentExecCall(args: ExecCallArgs): TerminalCallView {
-  return {
-    card: 'terminal',
-    title: args.cmd,
-    ...(args.workdir !== undefined ? { cwd: args.workdir } : {}),
-  }
+  return { card: 'terminal', title: args.cmd, ...(args.workdir !== undefined ? { cwd: args.workdir } : {}) }
 }
 
 /**
@@ -37,10 +33,7 @@ export function presentExecCall(args: ExecCallArgs): TerminalCallView {
  * @returns the terminal call view.
  */
 export function presentWriteStdinCall(args: WriteStdinCallArgs): TerminalCallView {
-  return {
-    card: 'terminal',
-    title: `write_stdin → session ${args.session_id}`,
-  }
+  return { card: 'terminal', title: `write_stdin → session ${args.session_id}` }
 }
 
 /**

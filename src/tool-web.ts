@@ -57,23 +57,11 @@ export interface WebRunArgs {
   search_query: SearchQuery[]
 }
 
-type WebRunSource = {
-  url: string
-  title?: string
-  snippet?: string
-  publishedAt?: string
-}
+type WebRunSource = { url: string; title?: string; snippet?: string; publishedAt?: string }
 
-type WebRunSearchResult = {
-  query: string
-  content?: string
-  sources: WebRunSource[]
-  truncated: boolean
-}
+type WebRunSearchResult = { query: string; content?: string; sources: WebRunSource[]; truncated: boolean }
 
-type WebRunValue = {
-  results: WebRunSearchResult[]
-}
+type WebRunValue = { results: WebRunSearchResult[] }
 
 /** Persisted presentation metadata for one completed `web_run` call. */
 interface WebRunMeta {
@@ -172,12 +160,7 @@ export function presentWebRunCall(args: WebRunArgs): {
   kind: 'search'
   rawInput: SearchQuery[]
 } {
-  return {
-    card: 'generic',
-    title: 'Web search',
-    kind: 'search',
-    rawInput: args.search_query,
-  }
+  return { card: 'generic', title: 'Web search', kind: 'search', rawInput: args.search_query }
 }
 
 /** Copy the portable web source fields into the persisted tool result. */
@@ -208,7 +191,7 @@ function projectSearchResult(query: string, result: WebSearchResult): WebRunSear
  */
 export function webRunMetaFromValue(value: WebRunValue): JsonValue {
   return {
-    results: value.results.map((result) => ({
+    results: value.results.map(result => ({
       query: result.query,
       sources: result.sources.map(projectSource),
       truncated: result.truncated,
@@ -272,7 +255,7 @@ export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebS
     return {
       card: 'web',
       kind: 'searches',
-      results: meta.results.map((search) => ({
+      results: meta.results.map(search => ({
         query: search.query,
         sources: search.sources,
         ...(search.answer === undefined ? {} : { answer: search.answer }),
@@ -316,9 +299,7 @@ export function apply(ctx: Context, config: Config): void {
           items: {
             type: 'object',
             additionalProperties: false,
-            properties: {
-              q: { type: 'string', required: true, description: 'Search query.' },
-            },
+            properties: { q: { type: 'string', required: true, description: 'Search query.' } },
           },
         },
       },

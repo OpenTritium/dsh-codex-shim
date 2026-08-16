@@ -43,7 +43,7 @@ function argsOf(block: ToolCallBlock): string {
 
 function resultText(block: ToolCallBlock): string | null {
   if (!('kind' in block)) return null
-  const parts = block.content.flatMap((item) => (item.type === 'text' ? [item.text] : []))
+  const parts = block.content.flatMap(item => (item.type === 'text' ? [item.text] : []))
   if (parts.length === 0 && block.error !== undefined) {
     parts.push(`${block.error.name}: ${block.error.code}`)
   }
@@ -52,7 +52,7 @@ function resultText(block: ToolCallBlock): string | null {
 
 function imageAttachment(block: ToolCallBlock): ImageAttachmentRef | undefined {
   if (!('kind' in block)) return undefined
-  return block.content.find((item) => item.type === 'image')?.attachment
+  return block.content.find(item => item.type === 'image')?.attachment
 }
 
 function imageSize(bytes: number): string {
@@ -75,7 +75,7 @@ function contentLineCount(text: string | null): number {
 }
 
 function patchSummary(diffs: readonly DiffHunk[]): string {
-  const paths = [...new Set(diffs.map((diff) => diff.path))]
+  const paths = [...new Set(diffs.map(diff => diff.path))]
   const scope = paths.length <= 2 ? paths.join(', ') : `${paths.slice(0, 2).join(', ')} +${paths.length - 2}`
   const added = diffs.reduce((total, diff) => total + contentLineCount(diff.newText), 0)
   const removed = diffs.reduce((total, diff) => total + contentLineCount(diff.oldText), 0)
@@ -179,7 +179,7 @@ function summaryFor(toolName: string, argsRaw: string, t: CodexToolRowProps['t']
     case 'web_run': {
       const queries = args?.search_query
       if (!Array.isArray(queries)) return t('row.webSearch')
-      const labels = queries.flatMap((query) => {
+      const labels = queries.flatMap(query => {
         if (typeof query !== 'object' || query === null || Array.isArray(query)) return []
         const value = (query as Record<string, unknown>).q
         return typeof value === 'string' && value.trim() !== '' ? [firstLine(value.trim())] : []
@@ -195,12 +195,7 @@ type CodexWebBlockProps =
   | WebBlockProps
   | {
       kind: 'searches'
-      results: Array<{
-        query: string
-        sources: WebSourceView[]
-        answer?: string
-        truncated: boolean
-      }>
+      results: Array<{ query: string; sources: WebSourceView[]; answer?: string; truncated: boolean }>
     }
 
 function webSource(value: unknown): WebSourceView | undefined {
@@ -224,7 +219,7 @@ function webCardFromBlock(block: ToolCallBlock): CodexWebBlockProps | undefined 
   if (view.kind === 'search') {
     if (!Array.isArray(view.sources) || typeof view.truncated !== 'boolean') return undefined
     const sources = view.sources.map(webSource)
-    if (sources.some((source) => source === undefined)) return undefined
+    if (sources.some(source => source === undefined)) return undefined
     if (view.answer !== undefined && typeof view.answer !== 'string') return undefined
     return {
       kind: 'search',
@@ -234,7 +229,7 @@ function webCardFromBlock(block: ToolCallBlock): CodexWebBlockProps | undefined 
     }
   }
   if (view.kind === 'searches' && Array.isArray(view.results)) {
-    const results = view.results.map((group) => {
+    const results = view.results.map(group => {
       if (typeof group !== 'object' || group === null || Array.isArray(group)) return undefined
       const item = group as Record<string, unknown>
       if (
@@ -245,7 +240,7 @@ function webCardFromBlock(block: ToolCallBlock): CodexWebBlockProps | undefined 
       )
         return undefined
       const sources = item.sources.map(webSource)
-      if (sources.some((source) => source === undefined)) return undefined
+      if (sources.some(source => source === undefined)) return undefined
       if (item.answer !== undefined && typeof item.answer !== 'string') return undefined
       return {
         query: item.query,
@@ -254,15 +249,10 @@ function webCardFromBlock(block: ToolCallBlock): CodexWebBlockProps | undefined 
         ...(item.answer === undefined ? {} : { answer: item.answer }),
       }
     })
-    if (results.some((result) => result === undefined)) return undefined
+    if (results.some(result => result === undefined)) return undefined
     return {
       kind: 'searches',
-      results: results as Array<{
-        query: string
-        sources: WebSourceView[]
-        answer?: string
-        truncated: boolean
-      }>,
+      results: results as Array<{ query: string; sources: WebSourceView[]; answer?: string; truncated: boolean }>,
     }
   }
   return undefined
@@ -370,7 +360,7 @@ function relevantPlanItems(
   current: PlanPresentation,
 ): PlanItemPresentation[] {
   const occurrences = collectPlanOccurrences(snapshot)
-  const index = occurrences.findIndex((item) => item.callId === callId)
+  const index = occurrences.findIndex(item => item.callId === callId)
   return changedPlanItems(current.items, index > 0 ? occurrences[index - 1]?.items : undefined)
 }
 
@@ -413,9 +403,7 @@ export function CodexToolRow({
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
   const plan = toolName === 'update_plan' ? parsePlanPresentation(argsRaw) : undefined
   const web = toolName === 'web_run' ? webCardFromBlock(block) : undefined
-  const planItems = useSession((snapshot) =>
-    plan === undefined ? [] : relevantPlanItems(snapshot, block.callId, plan),
-  )
+  const planItems = useSession(snapshot => (plan === undefined ? [] : relevantPlanItems(snapshot, block.callId, plan)))
   const showRawPanels = toolName !== 'view_image' && plan === undefined && web === undefined
   const expandable =
     diff !== null ||
@@ -429,7 +417,7 @@ export function CodexToolRow({
   const summary = outputSummary ?? (diff === null ? summaryFor(toolName, argsRaw, t) : patchSummary(diff))
   const status = stateLabel(state, t)
   const toggle = (): void => {
-    setExpanded((value) => !value)
+    setExpanded(value => !value)
   }
 
   return (
@@ -515,10 +503,7 @@ export function CodexToolRow({
                     openNamed: (label: string) => t('row.imageOpenNamed', { label }),
                     loading: t('row.imageLoading'),
                     loadFailed: t('row.imageLoadFailed'),
-                    lightbox: {
-                      dialog: t('row.imagePreview'),
-                      close: t('row.imageClose'),
-                    },
+                    lightbox: { dialog: t('row.imagePreview'), close: t('row.imageClose') },
                   }}
                 />
                 <dl className={css.imageMeta}>

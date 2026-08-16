@@ -63,11 +63,7 @@ describe('web_run', () => {
     expect(
       presentWebRunResult(
         { search_query: [{ q: 'first' }, { q: 'second' }] },
-        {
-          content: [],
-          isError: false,
-          meta: meta as never,
-        },
+        { content: [], isError: false, meta: meta as never },
       ),
     ).toEqual({
       card: 'web',

@@ -89,7 +89,7 @@ export class ExecSessionRegistry {
   /** Select the oldest completed session, otherwise the oldest live session. */
   private evictionCandidate(owned: Map<number, TrackedExecSession>): TrackedExecSession {
     const sessions = [...owned.values()].sort((left, right) => left.lastUsed - right.lastUsed)
-    const candidate = sessions.find((session) => session.proc.status !== 'running') ?? sessions[0]
+    const candidate = sessions.find(session => session.proc.status !== 'running') ?? sessions[0]
     if (candidate === undefined) throw new Error('cannot evict from an empty exec session registry')
     return candidate
   }
@@ -109,12 +109,12 @@ export class ExecSessionRegistry {
         /* v8 ignore start */
         if (owned === undefined) return
         /* v8 ignore stop */
-        const processes = [...owned.values()].map((session) => session.proc)
+        const processes = [...owned.values()].map(session => session.proc)
         owned.clear()
         this.byAgent.delete(agent)
         this.nextId.delete(agent)
         for (const process of processes) process.kill()
-        await Promise.all(processes.map((process) => process.done))
+        await Promise.all(processes.map(process => process.done))
       },
       'codex-exec.ownerCleanup()',
     )

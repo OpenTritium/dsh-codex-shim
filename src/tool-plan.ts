@@ -61,12 +61,7 @@ export function presentPlanCall(args: UpdatePlanArgs): {
   kind: 'other'
   rawInput: UpdatePlanArgs['plan']
 } {
-  return {
-    card: 'generic',
-    title: 'Update plan',
-    kind: 'other',
-    rawInput: args.plan,
-  }
+  return { card: 'generic', title: 'Update plan', kind: 'other', rawInput: args.plan }
 }
 
 /**
@@ -100,10 +95,7 @@ export function apply(ctx: Context): void {
           },
         },
       },
-      output: {
-        schema: { type: 'string' },
-        render: () => [{ type: 'text', text: 'Plan updated' }],
-      },
+      output: { schema: { type: 'string' }, render: () => [{ type: 'text', text: 'Plan updated' }] },
       execute(args, exec) {
         const todos = toTodoList(args.plan)
         if (exec.agent === undefined) {

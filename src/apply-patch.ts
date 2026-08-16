@@ -170,11 +170,7 @@ export function parseInvocation(script: string): ApplyPatchInvocation {
   }
   if (!closed) return { kind: 'malformed-invocation' }
   const patch = body.join('\n')
-  return {
-    kind: 'invocation',
-    patch,
-    ...(workdir !== undefined ? { workdir } : {}),
-  }
+  return { kind: 'invocation', patch, ...(workdir !== undefined ? { workdir } : {}) }
 }
 
 /**
@@ -212,7 +208,7 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   const lines = text
     .trim()
     .split('\n')
-    .map((line) => line.replace(/\r$/, ''))
+    .map(line => line.replace(/\r$/, ''))
   const first = lines[0]?.trim()
   const last = lines.at(-1)?.trim()
   if (first !== BEGIN_PATCH_MARKER) {
@@ -225,11 +221,7 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   type Mode =
     | { kind: 'add'; op: Extract<MutableOp, { kind: 'add' }> }
     | { kind: 'delete'; op: Extract<MutableOp, { kind: 'delete' }> }
-    | {
-        kind: 'update'
-        op: Extract<MutableOp, { kind: 'update' }>
-        chunk: MutableChunk | undefined
-      }
+    | { kind: 'update'; op: Extract<MutableOp, { kind: 'update' }>; chunk: MutableChunk | undefined }
     | { kind: 'idle' }
   let mode: Mode = { kind: 'idle' }
   let environmentId: string | undefined
@@ -381,10 +373,7 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
       throw new ApplyPatchError(`invalid hunk at line ${lineNumber}, Add file hunk for path '${op.path}' has no lines`)
     }
   }
-  return {
-    ops,
-    ...(environmentId !== undefined ? { environmentId } : {}),
-  }
+  return { ops, ...(environmentId !== undefined ? { environmentId } : {}) }
 }
 
 /**
@@ -522,7 +511,7 @@ class SourceFile {
   }
 
   lineTexts(): string[] {
-    return this.lines.map((line) => line.text)
+    return this.lines.map(line => line.text)
   }
 
   applyReplacements(replacements: readonly Replacement[]): void {
@@ -530,18 +519,15 @@ class SourceFile {
     let sourceIndex = 0
     for (const replacement of replacements) {
       next.push(...this.lines.slice(sourceIndex, replacement.start))
-      next.push(...replacement.newLines.map((text) => ({ text, ending: this.preferredEnding })))
+      next.push(...replacement.newLines.map(text => ({ text, ending: this.preferredEnding })))
       sourceIndex = replacement.start + replacement.oldLength
     }
     next.push(...this.lines.slice(sourceIndex))
-    this.lines = next.map((line) => ({
-      ...line,
-      ending: line.ending ?? this.preferredEnding,
-    }))
+    this.lines = next.map(line => ({ ...line, ending: line.ending ?? this.preferredEnding }))
   }
 
   intoContents(): string {
-    return this.lines.map((line) => `${line.text}${line.ending!}`).join('')
+    return this.lines.map(line => `${line.text}${line.ending!}`).join('')
   }
 }
 
@@ -721,12 +707,7 @@ export async function applyPatch(
   type VerifiedOperation =
     | { readonly kind: 'add'; readonly path: string; readonly content: string }
     | { readonly kind: 'delete'; readonly path: string }
-    | {
-        readonly kind: 'update'
-        readonly path: string
-        readonly moveTo: string | undefined
-        readonly content: string
-      }
+    | { readonly kind: 'update'; readonly path: string; readonly moveTo: string | undefined; readonly content: string }
 
   const operations: VerifiedOperation[] = []
   const added: string[] = []
@@ -734,11 +715,7 @@ export async function applyPatch(
   const deleted: string[] = []
   for (const op of patch.ops) {
     if (op.kind === 'add') {
-      operations.push({
-        kind: 'add',
-        path: op.path,
-        content: op.lines.map((line) => `${line}\n`).join(''),
-      })
+      operations.push({ kind: 'add', path: op.path, content: op.lines.map(line => `${line}\n`).join('') })
       added.push(op.path)
       continue
     }

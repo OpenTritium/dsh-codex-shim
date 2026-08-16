@@ -57,10 +57,7 @@ export async function readImage(ctx: Context, exec: ToolExecution, path: string)
   if (attachments === undefined) throw new Error(`cannot read "${path}" as an image: no attachment service is mounted`)
   if (!attachments.imageLimits.mediaTypes.includes(mediaType))
     throw new Error(`cannot read "${path}": ${mediaType} images are not accepted by this deployment`)
-  const target = await ctx.fs.resolve(path, {
-    cwd: exec.agent?.session.header.cwd,
-    signal: exec.signal,
-  })
+  const target = await ctx.fs.resolve(path, { cwd: exec.agent?.session.header.cwd, signal: exec.signal })
   const info = await ctx.fs.stat(target, exec.signal)
   if (info === undefined) {
     ctx.emit('fs/observed', target, { kind: 'absent' }, exec)

@@ -1,6 +1,7 @@
 import z from "@deepseek-ai/schemastery";
 import { JsonValue, ToolResult, WebSearchResultView } from "@deepseek-ai/dsh-tools";
 import { Context } from "@deepseek-ai/cordis";
+
 //#region src/tool-web.d.ts
 /** Cordis plugin name. */
 declare const name = "opentritium-codex-web";

@@ -49,17 +49,12 @@ export function apply(ctx: ClientContext): void {
   const ViewImageRow = (props: Parameters<typeof CodexToolRow>[0]) =>
     createElement(CodexToolRow, {
       ...props,
-      imageLoader: (attachment) => imageResolver.load(props.sessionId, attachment),
+      imageLoader: attachment => imageResolver.load(props.sessionId, attachment),
     })
   ctx.slots.inject('tool.call.toolview', function* () {
     for (const key of CODEX_TOOL_NAMES) {
       yield ctx.slots.register(
-        {
-          name: 'tool.call.toolview',
-          key,
-          locale: NS,
-          ...(key === 'web_run' ? { priority: -1 } : {}),
-        },
+        { name: 'tool.call.toolview', key, locale: NS, ...(key === 'web_run' ? { priority: -1 } : {}) },
         key === 'view_image' ? ViewImageRow : CodexToolRow,
       )
     }
@@ -86,7 +81,7 @@ function createImageResolver(sessions: ISessions): ImageResolver {
     if (session === undefined) return Promise.reject(new Error(`unknown session "${sessionId}"`))
     const request = session
       .readAttachment(attachment.attachmentId)
-      .then((result) => {
+      .then(result => {
         if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
         if (typeof URL.createObjectURL !== 'function') {
           return `data:${result.value.attachment.mediaType};base64,${bytesToBase64(result.value.data)}`
@@ -97,7 +92,7 @@ function createImageResolver(sessions: ISessions): ImageResolver {
         urls.add(url)
         return url
       })
-      .catch((error) => {
+      .catch(error => {
         if (pending.get(key) === request) pending.delete(key)
         throw error
       })

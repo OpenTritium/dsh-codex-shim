@@ -15,9 +15,7 @@ import css from './CodexSettingsCard.module.css'
 import { modelRouteKey } from '../settings.ts'
 
 export interface CodexSettingsCardFace {
-  hooks: {
-    codexSettings: import('@deepseek-ai/dsh-client-runtime/client').SnapshotStore<CodexSettingsState>
-  }
+  hooks: { codexSettings: import('@deepseek-ai/dsh-client-runtime/client').SnapshotStore<CodexSettingsState> }
   edit: (field: 'enabled' | 'modelPatterns', text: string) => void
   setModelDecision: (provider: string, model: string, decision: ModelOverrideDecision) => void
   addModelException: (provider: string, model: string) => void
@@ -33,7 +31,7 @@ type Props = PropsRuntime<'settings.plugin.item'> & PropsLocale<'codex'> & Injec
 export function CodexSettingsCard(props: Props) {
   const [open, setOpen] = useState(false)
   const [addingModel, setAddingModel] = useState(false)
-  const state = props.useCodexSettings((snapshot) => snapshot)
+  const state = props.useCodexSettings(snapshot => snapshot)
   if (!state.available) return null
   const field = (key: 'enabled' | 'modelPatterns') => state[key]
   const disabled = !state.writable || state.saving
@@ -45,7 +43,7 @@ export function CodexSettingsCard(props: Props) {
         className={css.header}
         aria-expanded={open}
         aria-label={`${props.t(open ? 'settings.collapse' : 'settings.expand')}: ${props.t('settings.title')}`}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(value => !value)}
       >
         <span className={css.headText}>
           <span className={css.name}>{props.t('settings.title')}</span>
@@ -72,7 +70,7 @@ export function CodexSettingsCard(props: Props) {
                   aria-label={props.t('settings.enabled')}
                   checked={field('enabled').text === 'true'}
                   disabled={disabled}
-                  onChange={(event) => props.edit('enabled', String(event.target.checked))}
+                  onChange={event => props.edit('enabled', String(event.target.checked))}
                 />
                 <span className={css.switchTrack} aria-hidden />
               </label>
@@ -102,7 +100,7 @@ export function CodexSettingsCard(props: Props) {
               className={field('modelPatterns').invalid ? css.inputInvalid : css.input}
               value={field('modelPatterns').text}
               disabled={disabled}
-              onChange={(event) => props.edit('modelPatterns', event.target.value)}
+              onChange={event => props.edit('modelPatterns', event.target.value)}
             />
             <p className={css.hint}>{props.t('settings.patternsHint')}</p>
           </div>
@@ -149,9 +147,9 @@ export function CodexSettingsCard(props: Props) {
                   autoFocus
                   defaultValue=""
                   disabled={disabled}
-                  onChange={(event) => {
+                  onChange={event => {
                     const selected = state.addableModels.find(
-                      (row) => modelRouteKey(row.provider, row.model) === event.target.value,
+                      row => modelRouteKey(row.provider, row.model) === event.target.value,
                     )
                     if (selected === undefined) return
                     props.addModelException(selected.provider, selected.model)
@@ -161,7 +159,7 @@ export function CodexSettingsCard(props: Props) {
                   <option value="" disabled>
                     {props.t('settings.modelsPick')}
                   </option>
-                  {state.addableModels.map((row) => (
+                  {state.addableModels.map(row => (
                     <option key={modelRouteKey(row.provider, row.model)} value={modelRouteKey(row.provider, row.model)}>
                       {row.providerName} / {row.modelName}
                     </option>
@@ -174,7 +172,7 @@ export function CodexSettingsCard(props: Props) {
             ) : null}
             {state.models.length > 0 ? (
               <ul className={css.models}>
-                {state.models.map((row) => (
+                {state.models.map(row => (
                   <li className={css.model} key={modelRouteKey(row.provider, row.model)}>
                     <div className={css.modelIdentity}>
                       <span className={css.modelName}>{row.modelName}</span>
@@ -186,7 +184,7 @@ export function CodexSettingsCard(props: Props) {
                         role="radiogroup"
                         aria-label={`${row.providerName} / ${row.modelName}`}
                       >
-                        {(['enabled', 'disabled'] as const).map((decision) => (
+                        {(['enabled', 'disabled'] as const).map(decision => (
                           <button
                             type="button"
                             className={`${css.decision} ${row.decision === decision ? css.decisionSelected : ''}`}
@@ -242,7 +240,7 @@ export function cardFace(controller: CodexSettingsCardController): CodexSettings
     setModelDecision: (provider, model, decision) => controller.setModelDecision(provider, model, decision),
     addModelException: (provider, model) => controller.addModelException(provider, model),
     removeModelException: (provider, model) => controller.removeModelException(provider, model),
-    reset: (field) => controller.reset(field),
+    reset: field => controller.reset(field),
     save: () => {
       void controller.save()
     },

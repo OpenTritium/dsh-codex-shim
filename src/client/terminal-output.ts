@@ -36,8 +36,5 @@ export function splitTerminalOutput(text: string): TerminalOutputSections {
     return { stdout: '', stderr: body.slice('[stderr]\n'.length) }
   }
   if (stderrStart === -1) return { stdout: body, stderr: '' }
-  return {
-    stdout: body.slice(0, stderrStart),
-    stderr: body.slice(stderrStart + stderrMarker.length),
-  }
+  return { stdout: body.slice(0, stderrStart), stderr: body.slice(stderrStart + stderrMarker.length) }
 }

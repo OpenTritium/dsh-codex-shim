@@ -43,7 +43,7 @@ export interface CodexSettingsState {
 function validOverrides(value: unknown): value is ModelOverride[] {
   return (
     Array.isArray(value) &&
-    value.every((item) => {
+    value.every(item => {
       if (typeof item !== 'object' || item === null) return false
       const row = item as Record<string, unknown>
       return (
@@ -60,7 +60,7 @@ function validOverrides(value: unknown): value is ModelOverride[] {
 function parsePatterns(text: string): string[] | undefined {
   const values = text
     .split(/\r?\n/)
-    .map((value) => value.trim())
+    .map(value => value.trim())
     .filter(Boolean)
   return values.includes('*') && values.length > 1 ? undefined : values
 }
@@ -71,14 +71,14 @@ function formatPatterns(value: unknown): string {
 
 function modelRows(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelRow[] {
   const known = new Map(
-    groups.flatMap((group) =>
-      group.models.map((model) => [
+    groups.flatMap(group =>
+      group.models.map(model => [
         modelRouteKey(group.id, model.id),
         { providerName: group.name, modelName: model.name },
       ]),
     ),
   )
-  return overrides.map((override) => {
+  return overrides.map(override => {
     const labels = known.get(modelRouteKey(override.provider, override.model))
     return {
       provider: override.provider,
@@ -91,16 +91,11 @@ function modelRows(groups: readonly ModelProviderGroup[], overrides: readonly Mo
 }
 
 function addableModels(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelOption[] {
-  const overridden = new Set(overrides.map((override) => modelRouteKey(override.provider, override.model)))
-  return groups.flatMap((group) =>
+  const overridden = new Set(overrides.map(override => modelRouteKey(override.provider, override.model)))
+  return groups.flatMap(group =>
     group.models
-      .filter((model) => !overridden.has(modelRouteKey(group.id, model.id)))
-      .map((model) => ({
-        provider: group.id,
-        providerName: group.name,
-        model: model.id,
-        modelName: model.name,
-      })),
+      .filter(model => !overridden.has(modelRouteKey(group.id, model.id)))
+      .map(model => ({ provider: group.id, providerName: group.name, model: model.id, modelName: model.name })),
   )
 }
 
@@ -218,7 +213,7 @@ export class CodexSettingsCardController {
       this.modelsStatus = 'ready'
       this.modelsError =
         response.result.value.failures.length > 0
-          ? response.result.value.failures.map((failure) => `${failure.name}: ${failure.message}`).join('; ')
+          ? response.result.value.failures.map(failure => `${failure.name}: ${failure.message}`).join('; ')
           : undefined
     } catch (error) {
       this.modelsStatus = 'error'
@@ -247,22 +242,22 @@ export class CodexSettingsCardController {
 
   setModelDecision(provider: string, model: string, decision: ModelOverrideDecision): void {
     if (
-      this.overrides().find((item) => item.provider === provider && item.model === model)?.enabled ===
+      this.overrides().find(item => item.provider === provider && item.model === model)?.enabled ===
       (decision === 'enabled')
     )
       return
-    const next = this.overrides().filter((item) => item.provider !== provider || item.model !== model)
+    const next = this.overrides().filter(item => item.provider !== provider || item.model !== model)
     next.push({ provider, model, enabled: decision === 'enabled' })
     this.stageOverrides(next)
   }
 
   addModelException(provider: string, model: string): void {
-    if (this.overrides().some((item) => item.provider === provider && item.model === model)) return
+    if (this.overrides().some(item => item.provider === provider && item.model === model)) return
     this.stageOverrides([...this.overrides(), { provider, model, enabled: true }])
   }
 
   removeModelException(provider: string, model: string): void {
-    const next = this.overrides().filter((item) => item.provider !== provider || item.model !== model)
+    const next = this.overrides().filter(item => item.provider !== provider || item.model !== model)
     if (next.length === this.overrides().length) return
     this.stageOverrides(next)
   }

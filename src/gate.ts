@@ -53,15 +53,7 @@ export interface Config {
 export const Config: z<Config> = z.object({
   enabled: z.boolean().default(true),
   modelPatterns: z.array(z.string()).default(['gpt-5.6-*']),
-  modelOverrides: z
-    .array(
-      z.object({
-        provider: z.string(),
-        model: z.string(),
-        enabled: z.boolean(),
-      }),
-    )
-    .default([]),
+  modelOverrides: z.array(z.object({ provider: z.string(), model: z.string(), enabled: z.boolean() })).default([]),
 })
 
 /** Tool names this family registers (hidden from advertisement while inactive). */
@@ -92,30 +84,15 @@ interface CodexShimReplacement {
 }
 
 const CODEX_SHIM_REPLACEMENTS: readonly CodexShimReplacement[] = [
-  {
-    requires: ['exec_command'],
-    masks: ['bash', 'pwsh', 'read', 'glob', 'grep'],
-  },
+  { requires: ['exec_command'], masks: ['bash', 'pwsh', 'read', 'glob', 'grep'] },
   {
     requires: ['exec_command', 'write_stdin'],
     masks: ['terminal_close', 'terminal_list', 'terminal_open', 'terminal_read', 'terminal_send', 'terminal_signal'],
   },
-  {
-    requires: ['apply_patch'],
-    masks: ['edit', 'str_replace_editor', 'write'],
-  },
-  {
-    requires: ['view_image'],
-    masks: ['read_image'],
-  },
-  {
-    requires: ['update_plan'],
-    masks: ['todo_write'],
-  },
-  {
-    requires: ['web_run'],
-    masks: ['web_search'],
-  },
+  { requires: ['apply_patch'], masks: ['edit', 'str_replace_editor', 'write'] },
+  { requires: ['view_image'], masks: ['read_image'] },
+  { requires: ['update_plan'], masks: ['todo_write'] },
+  { requires: ['web_run'], masks: ['web_search'] },
 ]
 
 /** Persona section name while the codex surface is active. */
@@ -160,10 +137,10 @@ function compilePattern(pattern: string): ((model: string) => boolean) | undefin
   if (pattern.length === 0 || pattern === '*') return undefined
   const source = pattern
     .split('*')
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('.*')
   const regex = new RegExp(source)
-  return (model) => regex.test(model)
+  return model => regex.test(model)
 }
 
 /**
@@ -173,7 +150,7 @@ function compilePattern(pattern: string): ((model: string) => boolean) | undefin
  * @returns true when any pattern matches.
  */
 export function modelMatches(model: string, patterns: readonly string[]): boolean {
-  return patterns.some((pattern) => compilePattern(pattern)?.(model) ?? true)
+  return patterns.some(pattern => compilePattern(pattern)?.(model) ?? true)
 }
 
 /**
@@ -188,10 +165,7 @@ export function modelMatches(model: string, patterns: readonly string[]): boolea
 function resolveRoute(
   assembled: PromptAssembly['variables'],
   context: AssembleContext,
-): {
-  provider: string | undefined
-  model: string | undefined
-} {
+): { provider: string | undefined; model: string | undefined } {
   const agent: Agent | undefined = context.agent
   const header = agent?.session.requestHeader()?.config
   return {
@@ -209,7 +183,7 @@ function resolveRoute(
  */
 function modelOverrideFor(config: Config, provider: string | undefined, model: string): boolean | undefined {
   if (provider === undefined) return undefined
-  return config.modelOverrides.find((override) => override.provider === provider && override.model === model)?.enabled
+  return config.modelOverrides.find(override => override.provider === provider && override.model === model)?.enabled
 }
 
 /**
@@ -221,14 +195,14 @@ function modelOverrideFor(config: Config, provider: string | undefined, model: s
  * @returns true when a Codex tool is visible within the scope.
  */
 function hasCodexTool(ctx: Context, scope: AssembleContext['scope']): boolean {
-  return [...CODEX_TOOL_NAMES].some((toolName) => ctx.tools.get(toolName, scope) !== undefined)
+  return [...CODEX_TOOL_NAMES].some(toolName => ctx.tools.get(toolName, scope) !== undefined)
 }
 
 function maskedHostToolNames(tools: PromptAssembly['tools']): ReadonlySet<string> {
-  const names = new Set(tools.map((tool) => tool.name))
+  const names = new Set(tools.map(tool => tool.name))
   const masked = new Set<string>()
   for (const replacement of CODEX_SHIM_REPLACEMENTS) {
-    if (replacement.requires.every((name) => names.has(name))) {
+    if (replacement.requires.every(name => names.has(name))) {
       for (const name of replacement.masks) masked.add(name)
     }
   }
@@ -241,7 +215,7 @@ function maskedHostToolNames(tools: PromptAssembly['tools']): ReadonlySet<string
  * @returns the Codex persona text for the visible tool set.
  */
 function personaFor(tools: PromptAssembly['tools']): string {
-  return tools.some((tool) => tool.name === 'web_run') ? `${CODEX_PERSONA}\n\n${CODEX_WEB_RUN_GUIDANCE}` : CODEX_PERSONA
+  return tools.some(tool => tool.name === 'web_run') ? `${CODEX_PERSONA}\n\n${CODEX_WEB_RUN_GUIDANCE}` : CODEX_PERSONA
 }
 
 /**
@@ -399,7 +373,7 @@ function adaptContexts(
   contexts: PromptAssembly['contexts'],
   permissions: CodexPermissions,
 ): PromptAssembly['contexts'] {
-  return contexts.map((context) => {
+  return contexts.map(context => {
     if (context.name === SANDBOX_POLICY_CONTEXT && permissions.sandbox !== undefined) {
       return { ...context, text: renderSandboxPolicy(permissions.sandbox) }
     }
@@ -432,7 +406,7 @@ export function apply(ctx: Context, config: Config): void {
   installSettingsSection(ctx, CODEX_SETTINGS_NAMESPACE, Config, config, {
     expose: 'client',
     validate: assertServiceableConfig,
-    setSource: (current) => {
+    setSource: current => {
       source = current
     },
     // Every field is read through the source at each assembly, so nothing
@@ -462,10 +436,7 @@ export function apply(ctx: Context, config: Config): void {
     )
     if (!activation.active) {
       // Hide the codex family while the host's own surface serves this route.
-      return {
-        ...assembled,
-        tools: assembled.tools.filter((tool) => !CODEX_TOOL_NAMES.has(tool.name)),
-      }
+      return { ...assembled, tools: assembled.tools.filter(tool => !CODEX_TOOL_NAMES.has(tool.name)) }
     }
     const permissions = resolvePermissions(ctx, context)
     const maskedHostTools = maskedHostToolNames(assembled.tools)
@@ -475,16 +446,16 @@ export function apply(ctx: Context, config: Config): void {
       contexts: [
         { name: CODEX_ENVIRONMENT_CONTEXT, text: renderEnvironmentContext(context) },
         ...adaptContexts(
-          assembled.contexts.filter((entry) => entry.name !== CODEX_ENVIRONMENT_CONTEXT),
+          assembled.contexts.filter(entry => entry.name !== CODEX_ENVIRONMENT_CONTEXT),
           permissions,
         ),
       ],
       tools: assembled.tools
-        .filter((tool) => {
+        .filter(tool => {
           if (CODEX_TOOL_NAMES.has(tool.name)) return CODEX_ADVERTISED_TOOL_NAMES.has(tool.name)
           return !maskedHostTools.has(tool.name)
         })
-        .map((tool) => adaptToolSchema(tool, permissions)),
+        .map(tool => adaptToolSchema(tool, permissions)),
     }
   })
 }
@@ -495,7 +466,7 @@ export function apply(ctx: Context, config: Config): void {
  * @param config - the resolved section, schema-valid by construction.
  */
 export function assertServiceableConfig(config: Config): void {
-  if (config.modelPatterns.some((pattern) => pattern.trim().length === 0 && pattern.length > 0)) {
+  if (config.modelPatterns.some(pattern => pattern.trim().length === 0 && pattern.length > 0)) {
     throw new Error('codex-gate: model patterns must not be whitespace-only')
   }
   if (config.modelPatterns.includes('') && config.modelPatterns.length > 1) {

@@ -20,11 +20,7 @@ vi.mock(
 const { CodexSettingsCardController } = await import('../src/client/settings-card-controller.ts')
 
 function fixture() {
-  let value: Record<string, unknown> = {
-    enabled: true,
-    modelPatterns: ['gpt-5.6-*'],
-    modelOverrides: [],
-  }
+  let value: Record<string, unknown> = { enabled: true, modelPatterns: ['gpt-5.6-*'], modelOverrides: [] }
   let user: Record<string, unknown> | undefined
   let unsubscribed = false
   const scope = {
@@ -65,7 +61,7 @@ function fixture() {
 describe('CodexSettingsCardController save and discard', () => {
   it('shows the composition default and persists an explicit pattern override', async () => {
     const { controller, getValue } = fixture()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
 
     controller.edit('modelPatterns', '')
     await controller.save()
@@ -80,7 +76,7 @@ describe('CodexSettingsCardController save and discard', () => {
 
   it('discards staged model exceptions and persists explicit decisions', async () => {
     const { controller, getValue, wasUnsubscribed } = fixture()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
     expect(controller.getStore().get().models).toEqual([])
     expect(controller.getStore().get().modelPatterns.text).toBe('gpt-5.6-*')
     expect(controller.getStore().get().modelPatterns.overridden).toBe(false)

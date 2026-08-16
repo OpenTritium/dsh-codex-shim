@@ -5,10 +5,10 @@ import {
   DiffBlock,
   DisclosureRow,
   IconApiOutline14,
-  IconBrowseOutline16,
   IconChecklistOutline14,
   IconEditOutline16,
   IconInspectOutline12,
+  IconPaperclipOutline16,
   IconSparkle16,
   StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -100,7 +100,7 @@ function iconName(toolName: string): string {
     case 'exec_command':
     case 'write_stdin': return 'bash'
     case 'apply_patch': return 'edit'
-    case 'view_image': return 'read'
+    case 'view_image': return 'image'
     case 'update_plan': return 'checklist'
     default: return 'other'
   }
@@ -111,7 +111,7 @@ function iconFor(toolName: string): ReactNode {
     case 'exec_command':
     case 'write_stdin': return <IconApiOutline14 size={14} />
     case 'apply_patch': return <IconEditOutline16 size={14} />
-    case 'view_image': return <IconBrowseOutline16 size={14} />
+    case 'view_image': return <IconPaperclipOutline16 size={14} />
     case 'update_plan': return <IconChecklistOutline14 size={14} />
     default: return <IconSparkle16 size={14} />
   }

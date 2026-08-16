@@ -139,14 +139,21 @@
 .imageCard {
   display: grid;
   grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-markdown-code-block);
+}
+
+.imageContent {
+  display: grid;
   grid-template-columns: minmax(0, auto) minmax(180px, 1fr);
   align-items: start;
   gap: 12px;
   min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-base);
+  padding: 8px 10px;
 }
 
 .imageMeta {
@@ -222,7 +229,7 @@
 }
 
 @media (max-width: 560px) {
-  .imageCard {
+  .imageContent {
     grid-template-columns: 1fr;
   }
 }

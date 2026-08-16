@@ -182,7 +182,8 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
   const stdin = toolName === 'write_stdin' ? stringArg(args, 'chars') : undefined
   const workdir = toolName === 'exec_command' ? stringArg(args, 'workdir') : undefined
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
-  const expandable = diff !== null || argsRaw !== '' || output !== null || image !== undefined
+  const showRawPanels = toolName !== 'view_image'
+  const expandable = diff !== null || image !== undefined || (showRawPanels && (argsRaw !== '' || output !== null))
   const open = expanded && expandable
   const outputSummary = state === 'error' && output !== null
     ? firstLine(terminalOutput?.stderr || terminalOutput?.stdout || output)
@@ -230,7 +231,7 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
               <pre className={css.ioText}>{stdin ?? t('row.noInput')}</pre>
             </section>
           ) : null}
-          {diff === null && terminalOutput === null && argsRaw !== '' ? (
+          {diff === null && terminalOutput === null && showRawPanels && argsRaw !== '' ? (
             <section className={css.ioCard} aria-label={t('row.input')}>
               <span className={css.ioLabel}>{t('row.input')}</span>
               <pre className={css.ioText}>{argsRaw}</pre>
@@ -248,7 +249,7 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
               <pre className={css.ioText} data-error>{terminalOutput.stderr}</pre>
             </section>
           ) : null}
-          {diff === null && terminalOutput === null && output !== null ? (
+          {diff === null && terminalOutput === null && showRawPanels && output !== null ? (
             <section className={css.ioCard} aria-label={t('row.output')}>
               <span className={css.ioLabel}>{t('row.output')}</span>
               <pre className={css.ioText} data-error={state === 'error' || undefined}>{output}</pre>
@@ -256,28 +257,31 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
           ) : null}
           {diff === null && image !== undefined && imageLoader !== undefined ? (
             <section className={css.imageCard} aria-label={t('row.imagePreview')}>
-              <MessageImage
-                attachment={image}
-                load={imageLoader}
-                variant="single"
-                labels={{
-                  image: t('row.image'),
-                  open: t('row.imageOpen'),
-                  openNamed: (label: string) => t('row.imageOpenNamed', { label }),
-                  loading: t('row.imageLoading'),
-                  loadFailed: t('row.imageLoadFailed'),
-                  lightbox: {
-                    dialog: t('row.imagePreview'),
-                    close: t('row.imageClose'),
-                  },
-                }}
-              />
-              <dl className={css.imageMeta}>
-                <div><dt>{t('row.imageFile')}</dt><dd>{image.name ?? t('row.image')}</dd></div>
-                <div><dt>{t('row.imageType')}</dt><dd>{image.mediaType}</dd></div>
-                <div><dt>{t('row.imageDimensions')}</dt><dd>{image.width} × {image.height}</dd></div>
-                <div><dt>{t('row.imageSize')}</dt><dd>{imageSize(image.bytes)}</dd></div>
-              </dl>
+              <span className={css.ioLabel}>{t('row.image')}</span>
+              <div className={css.imageContent}>
+                <MessageImage
+                  attachment={image}
+                  load={imageLoader}
+                  variant="single"
+                  labels={{
+                    image: t('row.image'),
+                    open: t('row.imageOpen'),
+                    openNamed: (label: string) => t('row.imageOpenNamed', { label }),
+                    loading: t('row.imageLoading'),
+                    loadFailed: t('row.imageLoadFailed'),
+                    lightbox: {
+                      dialog: t('row.imagePreview'),
+                      close: t('row.imageClose'),
+                    },
+                  }}
+                />
+                <dl className={css.imageMeta}>
+                  <div><dt>{t('row.imageFile')}</dt><dd>{image.name ?? t('row.image')}</dd></div>
+                  <div><dt>{t('row.imageType')}</dt><dd>{image.mediaType}</dd></div>
+                  <div><dt>{t('row.imageDimensions')}</dt><dd>{image.width} × {image.height}</dd></div>
+                  <div><dt>{t('row.imageSize')}</dt><dd>{imageSize(image.bytes)}</dd></div>
+                </dl>
+              </div>
             </section>
           ) : null}
           {inspect !== undefined ? (

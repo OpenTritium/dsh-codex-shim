@@ -38,9 +38,9 @@ jobs:
         working-directory: upstream
 
       - name: Apply the required upstream extension
-        run: git -C upstream apply --check patches/deepseek-harness-settings-client-exposure-47f9438.patch
+        run: git -C upstream apply --check "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
 
-      - run: git -C upstream apply patches/deepseek-harness-settings-client-exposure-47f9438.patch
+      - run: git -C upstream apply "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
 
       - run: pnpm run build
         working-directory: upstream

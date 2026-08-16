@@ -88,7 +88,7 @@
 
 .ioCard {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l1);

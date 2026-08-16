@@ -24,6 +24,7 @@ export default defineConfig([
       'tool-exec': 'src/tool-exec.ts',
       'tool-plan': 'src/tool-plan.ts',
       'tool-web': 'src/tool-web.ts',
+      'openai-web-provider': 'src/openai-web-provider.ts',
       'apply-patch': 'src/apply-patch.ts',
     },
     outDir: 'lib',

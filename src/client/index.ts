@@ -10,7 +10,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
 import { CodexToolRow } from './CodexToolRow.tsx'
 import { CodexSettingsCard, cardFace } from './CodexSettingsCard.tsx'
+import { OpenAIWebSettingsCard, openAIWebCardFace } from './OpenAIWebSettingsCard.tsx'
 import { CODEX_SETTINGS_NS, CodexSettingsCardController } from './settings-card-controller.ts'
+import { OPENAI_WEB_SETTINGS_NS, OpenAIWebSettingsCardController } from './openai-web-settings-card-controller.ts'
 import { en, NS, zh, type CodexKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -51,7 +53,9 @@ export function apply(ctx: ClientContext): void {
 function installSettings(ctx: ClientContext): void {
   const connection = ctx.get('connection') as ConnectionHandle
   const settings = new CodexSettingsCardController(ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }), connection.api)
+  const webSettings = new OpenAIWebSettingsCardController(ctx.settingsScope.bind({ namespace: OPENAI_WEB_SETTINGS_NS }))
   ctx.effect(() => () => settings.dispose(), 'ui-codex: settings controller')
+  ctx.effect(() => () => webSettings.dispose(), 'ui-codex: OpenAI web settings controller')
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     id: 'opentritium-codex',
@@ -59,4 +63,11 @@ function installSettings(ctx: ClientContext): void {
     locale: NS,
     inject: () => cardFace(settings),
   }, CodexSettingsCard))
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
+    id: 'opentritium-codex-openai-web',
+    order: 30,
+    locale: NS,
+    inject: () => openAIWebCardFace(webSettings),
+  }, OpenAIWebSettingsCard))
 }

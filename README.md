@@ -23,7 +23,7 @@ For local development, replace the Git URL with the local repository path. Profi
 
 - Route-aware Codex prompt and tool advertisement, configured by `opentritium-codex` settings.
 - `exec_command`, `apply_patch`, `view_image`, and `update_plan` adapters over public Harness services.
-- `web_run` over `ctx.web.search()`.
+- `web_run` over `ctx.web.search()`, with an OpenAI Responses hosted Web Search provider.
 - Browser tool rows for Codex tool calls.
 - A **Settings -> Plugins -> Plugin configuration** card that edits the
   `opentritium-codex` user layer. The profile overlay remains its composition
@@ -36,7 +36,21 @@ profile therefore keeps the host tools and prompt without loading browser code,
 and a partial WebUI does not lose tool rows because its settings surface is
 absent.
 
-`web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, arbitrary page fetch, or an OpenAI-hosted search provider.
+`web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, or arbitrary page fetch. The optional OpenAI provider may perform its own hosted retrieval internally, but only returns its search answer and URL citations through the portable `ctx.web.search()` result.
+
+## OpenAI Web Search
+
+The bundle ships `opentritium-codex-openai-web`, a `ctx.web` search provider backed by the OpenAI Responses hosted `web_search` tool. It is enabled by default and resolves `OPENAI_API_KEY` through the Harness credentials service or the launching environment for each request. The key is never stored in the plugin settings or rendered in WebUI.
+
+Because `dsh-base` explicitly selects its own search provider, select the OpenTritium provider in the dedicated profile overlay:
+
+```yaml
+- id: web
+  config:
+    searchProvider: opentritium-openai-responses
+```
+
+In **Settings -> Plugins -> Plugin configuration -> OpenAI web search**, configure the Responses endpoint, credential reference, search model, context size, and enabled state. The endpoint must expose the OpenAI Responses `/responses` API and the selected model must support hosted `web_search`; ordinary Chat Completions-compatible gateways are not sufficient.
 
 ## Upstream Seam Required
 
@@ -46,10 +60,6 @@ namespace. The separately reviewable generic patch used for development adds
 `expose: 'client'` to `settings.register()` and makes the Host API Proxy serve
 only namespaces that explicitly opt in. This bundle declares that option for
 `opentritium-codex`; no `@deepseek-ai` package contains Codex-specific rows.
-
-Until that generic upstream change is released, the bundle still loads and the
-profile overlay works, but its browser configuration card is intentionally
-unavailable rather than writing through an undeclared or private path.
 
 Pinned upstream exposes `ShellProcess.start()`, incremental output reads, and termination, but not an interactive stdin write method. Consequently `write_stdin` can poll an existing session but rejects non-empty `chars`; it is not advertised as interactive input support.
 

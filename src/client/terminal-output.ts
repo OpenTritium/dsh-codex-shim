@@ -27,6 +27,7 @@ export function splitTerminalOutput(text: string): TerminalOutputSections {
     : hasEnvelope && text.startsWith('Output:\n')
       ? text.slice('Output:\n'.length)
       : text
+  if (!hasEnvelope) return { stdout: body, stderr: '' }
   const stderrMarker = '\n[stderr]\n'
   const stderrStart = body.indexOf(stderrMarker)
   if (body.startsWith('[stderr]\n')) {

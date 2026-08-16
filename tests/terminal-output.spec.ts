@@ -23,4 +23,11 @@ describe('splitTerminalOutput', () => {
       stderr: '',
     })
   })
+
+  it('does not infer stderr from an unwrapped program marker', () => {
+    expect(splitTerminalOutput('hello\n[stderr]\nworld\n')).toEqual({
+      stdout: 'hello\n[stderr]\nworld\n',
+      stderr: '',
+    })
+  })
 })

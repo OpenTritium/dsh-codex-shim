@@ -98,19 +98,13 @@ describe('web_run', () => {
       truncated: false,
     })
     expect(
-      parseWebRunView({
-        card: 'web',
-        kind: 'searches',
-        results: [{ query: 'first', sources: [], truncated: false }],
-      }),
-    ).toEqual({
-      card: 'web',
-      kind: 'searches',
-      results: [{ query: 'first', sources: [], truncated: false }],
-    })
-    expect(parseWebRunView({ card: 'web', kind: 'searches', results: [{ query: '', sources: [], truncated: false }] })).toBe(
+      parseWebRunView({ card: 'web', kind: 'searches', results: [{ query: 'first', sources: [], truncated: false }] }),
+    ).toEqual({ card: 'web', kind: 'searches', results: [{ query: 'first', sources: [], truncated: false }] })
+    expect(
+      parseWebRunView({ card: 'web', kind: 'searches', results: [{ query: '', sources: [], truncated: false }] }),
+    ).toBe(undefined)
+    expect(parseWebRunView({ card: 'web', kind: 'fetch', url: 'https://example.test', statusCode: 200 })).toBe(
       undefined,
     )
-    expect(parseWebRunView({ card: 'web', kind: 'fetch', url: 'https://example.test', statusCode: 200 })).toBe(undefined)
   })
 })

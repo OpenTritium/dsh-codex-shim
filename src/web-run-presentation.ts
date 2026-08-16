@@ -28,19 +28,8 @@ export interface WebRunMeta {
 }
 
 export type WebRunView =
-  | {
-      card: 'web'
-      kind: 'search'
-      title?: string
-      sources: WebRunSource[]
-      answer?: string
-      truncated: boolean
-    }
-  | {
-      card: 'web'
-      kind: 'searches'
-      results: WebRunSearchGroup[]
-    }
+  | { card: 'web'; kind: 'search'; title?: string; sources: WebRunSource[]; answer?: string; truncated: boolean }
+  | { card: 'web'; kind: 'searches'; results: WebRunSearchGroup[] }
 
 function objectValue(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -101,7 +90,9 @@ export function parseWebRunView(value: unknown): WebRunView | undefined {
     const results = object.results
     if (!Array.isArray(results)) return undefined
     const groups = results.map(searchGroupValue)
-    return groups.some(group => group === undefined) ? undefined : { card: 'web', kind: 'searches', results: groups as WebRunSearchGroup[] }
+    return groups.some(group => group === undefined)
+      ? undefined
+      : { card: 'web', kind: 'searches', results: groups as WebRunSearchGroup[] }
   }
   if (object.kind !== 'search' || (object.title !== undefined && typeof object.title !== 'string')) return undefined
   const sources = sourceList(object.sources)

@@ -33,40 +33,55 @@ export function resolveMaxOutputTokens(requested: number | undefined): number {
 }
 
 function prefixWithinBytes(text: string, budget: number): string {
+  let end = 0
   let bytes = 0
-  let prefix = ''
-  for (const character of text) {
-    const width = Buffer.byteLength(character)
+  while (end < text.length) {
+    const codePoint = text.codePointAt(end)
+    if (codePoint === undefined) break
+    const width = utf8Width(codePoint)
     if (bytes + width > budget) break
-    prefix += character
+    end += codePoint > 0xffff ? 2 : 1
     bytes += width
   }
-  return prefix
+  return text.slice(0, end)
 }
 
 function suffixWithinBytes(text: string, budget: number): string {
   let bytes = 0
-  const suffix: string[] = []
-  const characters = Array.from(text)
-  for (let index = characters.length - 1; index >= 0; index -= 1) {
-    const character = characters[index]
-    if (character === undefined) continue
-    const width = Buffer.byteLength(character)
+  let start = text.length
+  while (start > 0) {
+    const codeUnit = text.charCodeAt(start - 1)
+    const isSurrogatePair = codeUnit >= 0xdc00 && codeUnit <= 0xdfff && start > 1
+    const pairStart =
+      isSurrogatePair && text.charCodeAt(start - 2) >= 0xd800 && text.charCodeAt(start - 2) <= 0xdbff
+        ? start - 2
+        : start - 1
+    const codePoint = text.codePointAt(pairStart)
+    if (codePoint === undefined) break
+    const width = utf8Width(codePoint)
     if (bytes + width > budget) break
-    suffix.push(character)
+    start = pairStart
     bytes += width
   }
-  return suffix.reverse().join('')
+  return text.slice(start)
+}
+
+function utf8Width(codePoint: number): number {
+  if (codePoint <= 0x7f) return 1
+  if (codePoint <= 0x7ff) return 2
+  if (codePoint <= 0xffff) return 3
+  return 4
 }
 
 export function truncateOutput(output: string, maxTokens: number): { output: string; originalTokenCount?: number } {
   const budget = resolveMaxOutputTokens(maxTokens)
-  const originalTokenCount = approxTokenCount(output)
+  const outputBytes = Buffer.byteLength(output)
+  const originalTokenCount = Math.ceil(outputBytes / APPROX_BYTES_PER_TOKEN)
   if (originalTokenCount <= budget) return { output }
   const maxBytes = budget * APPROX_BYTES_PER_TOKEN
   const leftBytes = Math.floor(maxBytes / 2)
   const rightBytes = maxBytes - leftBytes
-  const omittedTokens = Math.ceil((Buffer.byteLength(output) - maxBytes) / APPROX_BYTES_PER_TOKEN)
+  const omittedTokens = Math.ceil((outputBytes - maxBytes) / APPROX_BYTES_PER_TOKEN)
   return {
     output: `${prefixWithinBytes(output, leftBytes)}…${omittedTokens} tokens truncated…${suffixWithinBytes(output, rightBytes)}`,
     originalTokenCount,

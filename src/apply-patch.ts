@@ -13,25 +13,15 @@
 
 import { resolve as resolvePath } from 'node:path'
 
-/** Patch marker starting the patch body. */
 const BEGIN_PATCH_MARKER = '*** Begin Patch'
-/** Patch marker ending the patch body. */
 const END_PATCH_MARKER = '*** End Patch'
-/** Marker prefix introducing an added file. */
 const ADD_FILE_MARKER = '*** Add File: '
-/** Marker prefix introducing a deleted file. */
 const DELETE_FILE_MARKER = '*** Delete File: '
-/** Marker prefix introducing an updated file. */
 const UPDATE_FILE_MARKER = '*** Update File: '
-/** Marker prefix introducing the rename target inside an update hunk. */
 const MOVE_TO_MARKER = '*** Move to: '
-/** Marker anchoring one update chunk at end of file. */
 const EOF_MARKER = '*** End of File'
-/** Marker prefix carrying one chunk's single context locator line. */
 const CHANGE_CONTEXT_MARKER = '@@ '
-/** The same marker without a locator text. */
 const EMPTY_CHANGE_CONTEXT_MARKER = '@@'
-/** Marker selecting one Codex remote environment. */
 const ENVIRONMENT_ID_MARKER = '*** Environment ID:'
 
 /**
@@ -39,116 +29,73 @@ const ENVIRONMENT_ID_MARKER = '*** Environment ID:'
  * consumer renders `apply_patch verification failed: {message}` around it.
  */
 export class ApplyPatchError extends Error {
-  /**
-   * @param message - upstream-worded failure detail.
-   */
   constructor(message: string) {
     super(message)
     this.name = 'ApplyPatchError'
   }
 }
 
-/** File-update mode supported by the upstream apply-patch engine. */
 export const ApplyPatchFileUpdateMode = {
   NormalizeToLf: 'normalize-to-lf',
   PreserveLineEndings: 'preserve-line-endings',
 } as const
 
-/** One file-update mode supported by the upstream apply-patch engine. */
 export type ApplyPatchFileUpdateMode = (typeof ApplyPatchFileUpdateMode)[keyof typeof ApplyPatchFileUpdateMode]
 
-/** One replacement block inside an update hunk. */
 export interface PatchUpdateChunk {
-  /** Single locator line from `@@ text`, absent for a bare `@@` or no header. */
   readonly changeContext: string | undefined
-  /** Old-side lines: removed lines plus context lines, in order. */
   readonly oldLines: readonly string[]
-  /** New-side lines: added lines plus context lines, in order. */
   readonly newLines: readonly string[]
-  /** Paired old/new indices that came from explicit context lines. */
   readonly contextLineIndices?: readonly (readonly [number, number])[]
-  /** Whether `*** End of File` anchored this chunk at the file tail. */
   readonly endOfFile: boolean
 }
 
-/** Hunk creating a file with the given content lines. */
 export interface PatchFileAdd {
   readonly kind: 'add'
-  /** Path as written in the patch, relative to the patch's working directory. */
   readonly path: string
-  /** Content lines, each a full line of the new file. */
   readonly lines: readonly string[]
 }
 
-/** Hunk deleting a file. */
 export interface PatchFileDelete {
   readonly kind: 'delete'
-  /** Path as written in the patch. */
   readonly path: string
 }
 
-/** Hunk updating and optionally renaming a file. */
 export interface PatchFileUpdate {
   readonly kind: 'update'
-  /** Source path as written in the patch. */
   readonly path: string
-  /** Rename destination from `*** Move to:`, when present. */
   readonly moveTo: string | undefined
-  /** Ordered replacement chunks. */
   readonly chunks: readonly PatchUpdateChunk[]
 }
 
-/** One parsed hunk. */
 export type PatchFileOp = PatchFileAdd | PatchFileDelete | PatchFileUpdate
 
-/** A fully parsed patch body. */
 export interface ParsedPatch {
-  /** Hunks in patch order. */
   readonly ops: readonly PatchFileOp[]
   /** Codex's selected remote environment, parsed but not routed by dsh. */
   readonly environmentId?: string
-  /** Working directory from a `cd <dir> &&` invocation prefix, when present. */
   readonly workdir?: string
 }
 
-/**
- * Classify a shell script against the apply_patch invocation forms. Accepted
- * forms accept the upstream `apply_patch` and `applypatch` spellings plus the
- * common `apply-patch` executable spelling. The whole script is one command
- * with a heredoc, optionally behind one `cd <dir> &&`. A patch
- * body embedded in a larger script is NOT an invocation — upstream runs it in
- * the shell, which is exactly the `apply_patch: command not found` failure
- * this engine exists to intercept in its strict forms only.
- */
 export type ApplyPatchInvocation =
   | { readonly kind: 'invocation'; readonly patch: string; readonly workdir?: string }
   | { readonly kind: 'implicit-invocation' }
   | { readonly kind: 'malformed-invocation' }
   | { readonly kind: 'none' }
 
-/** Strict heredoc invocation: optional one-argument `cd <dir> &&`, then the command. */
 const INVOCATION_START =
   /^(?:cd[ \t]+(?:'([^']*)'|"([^"]*)"|([^\s&]+))[ \t]*&&[ \t]*)?(?:apply_patch|apply-patch|applypatch)[ \t]*(<<-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\5[ \t]*$/
 
-/**
- * Detect an apply-patch heredoc invocation in a shell script. A script
- * that is itself a bare patch body reports {@link ApplyPatchInvocation} kind
- * `implicit-invocation` (upstream rejects it with a rerun instruction); a
- * script starting with `apply_patch` whose heredoc does not parse reports
- * `malformed-invocation`; everything else reports `none`.
- * @param script - the whole shell command text.
- * @returns the invocation classification.
- */
 export function parseInvocation(script: string): ApplyPatchInvocation {
   const lines = script.split('\n')
-  // split('\n') always yields at least one element; the fallback only satisfies the indexer.
   /* v8 ignore next */
   const first = lines[0] ?? ''
   const match = INVOCATION_START.exec(first)
   if (match === null) {
-    // A bare patch body typed as the command is the known misuse upstream
-    // answers with the explicit rerun instruction.
-    return looksLikePatchBody(script) ? { kind: 'implicit-invocation' } : { kind: 'none' }
+    const trimmed = script.trim()
+    return trimmed.startsWith(BEGIN_PATCH_MARKER) && trimmed.endsWith(END_PATCH_MARKER)
+      ? { kind: 'implicit-invocation' }
+      : { kind: 'none' }
   }
   const [, singleQuotedWorkdir, doubleQuotedWorkdir, bareWorkdir, arrows, , delimiter] = match
   const workdir = singleQuotedWorkdir ?? doubleQuotedWorkdir ?? bareWorkdir
@@ -165,7 +112,6 @@ export function parseInvocation(script: string): ApplyPatchInvocation {
       body.push(line)
       continue
     }
-    // After the closing delimiter only trailing whitespace may remain.
     if (line.trim() !== '') return { kind: 'malformed-invocation' }
   }
   if (!closed) return { kind: 'malformed-invocation' }
@@ -173,17 +119,6 @@ export function parseInvocation(script: string): ApplyPatchInvocation {
   return { kind: 'invocation', patch, ...(workdir !== undefined ? { workdir } : {}) }
 }
 
-/**
- * Whether a text starts and ends with the patch boundary markers.
- * @param text - candidate patch body.
- * @returns true when the boundary markers are present.
- */
-function looksLikePatchBody(text: string): boolean {
-  const trimmed = text.trim()
-  return trimmed.startsWith(BEGIN_PATCH_MARKER) && trimmed.endsWith(END_PATCH_MARKER)
-}
-
-/** Builder-side mutable chunk shape; frozen on return. */
 interface MutableChunk {
   changeContext: string | undefined
   oldLines: string[]
@@ -192,18 +127,11 @@ interface MutableChunk {
   endOfFile: boolean
 }
 
-/** Builder-side mutable hunk shapes; frozen on return. */
 type MutableOp =
   | { kind: 'add'; path: string; lines: string[] }
   | { kind: 'delete'; path: string }
   | { kind: 'update'; path: string; moveTo: string | undefined; chunks: MutableChunk[] }
 
-/**
- * Parse a patch body between its boundary markers into hunks.
- * @param text - the patch body (`*** Begin Patch` … `*** End Patch`).
- * @returns the parsed hunks without a working directory.
- * @throws ApplyPatchError with upstream wording on malformed patches.
- */
 export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   const lines = text
     .trim()
@@ -226,14 +154,8 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   let mode: Mode = { kind: 'idle' }
   let environmentId: string | undefined
   let canReadEnvironmentId = true
-  /** Current body line's 1-based position in the whole patch text. */
   let lineNumber = 1
 
-  /**
-   * Reject an update hunk whose last chunk carries no lines, mirroring
-   * upstream's two empty-hunk diagnostics.
-   * @param line - the line about to be handled.
-   */
   const ensureUpdateNotEmpty = (line: string): void => {
     if (mode.kind !== 'update') return
     if (mode.op.chunks.length === 0) {
@@ -376,12 +298,7 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   return { ops, ...(environmentId !== undefined ? { environmentId } : {}) }
 }
 
-/**
- * Parse an invocation and its patch body in one step.
- * @param script - the whole shell command text.
- * @returns the parsed patch for an `invocation` result.
- * @throws ApplyPatchError when the invocation's patch body does not parse.
- */
+/** Parse an invocation and its patch body; throws when either is malformed. */
 export function parseInvocationPatch(script: string): ParsedPatch {
   const invocation = parseInvocation(script)
   if (invocation.kind !== 'invocation') {
@@ -393,12 +310,6 @@ export function parseInvocationPatch(script: string): ParsedPatch {
   }
 }
 
-/**
- * Normalize one line for a matching pass.
- * @param text - the raw line.
- * @param pass - matching strictness; 0 exact, 1 trim-end, 2 trim-both, 3 punctuation-normalized.
- * @returns the normalized comparison text.
- */
 function normalizeForPass(text: string, pass: number): string {
   if (pass === 0) return text
   if (pass === 1) return text.trimEnd()
@@ -411,17 +322,7 @@ function normalizeForPass(text: string, pass: number): string {
     .replace(/[\u00A0\u2002-\u200A\u202F\u205F\u3000]/g, ' ')
 }
 
-/**
- * Find `pattern` inside `lines` at or after `start`, four passes of decreasing
- * strictness (exact, trailing-whitespace, full trim, Unicode punctuation), the
- * upstream seek_sequence port. An end-of-file pattern first tries the file
- * tail.
- * @param lines - the file's lines.
- * @param pattern - the lines to locate.
- * @param start - first candidate index.
- * @param eof - whether the pattern anchors at end of file.
- * @returns the match start index, or undefined when no pass matches.
- */
+/** Match through the four upstream normalization passes. */
 export function seekSequence(
   lines: readonly string[],
   pattern: readonly string[],
@@ -441,7 +342,6 @@ export function seekSequence(
     for (let i = searchStart; i + pattern.length <= lines.length; i++) {
       let ok = true
       for (let p = 0; p < pattern.length; p++) {
-        // Both indices are bounds-checked by the surrounding loops; the fallbacks only satisfy the indexer.
         /* v8 ignore start */
         const fileLine = lines[i + p] ?? ''
         const patternLine = pattern[p] ?? ''
@@ -609,15 +509,6 @@ function applyReplacements(lines: readonly string[], replacements: readonly Repl
   return updated
 }
 
-/**
- * Derive a file's post-patch content from its original content.
- * @param original - the file's current full text.
- * @param path - display path for error wording.
- * @param chunks - the hunk's ordered chunks.
- * @param updateFileMode - whether to normalize or retain source line endings.
- * @returns the new full text in the selected upstream mode.
- * @throws ApplyPatchError with upstream wording when a chunk does not match.
- */
 export function deriveUpdatedContent(
   original: string,
   path: string,
@@ -637,56 +528,19 @@ export function deriveUpdatedContent(
   return sourceFile.intoContents()
 }
 
-/** File operations the applier needs; consumers bind them to their capabilities. */
 export interface ApplyPatchIo {
-  /**
-   * Read one file's full text.
-   * @param path - path as written in the patch.
-   * @param workdir - working directory for relative paths.
-   * @returns the file's current content.
-   */
   readText(path: string, workdir: string): Promise<string>
-  /**
-   * Create or replace one file's full text.
-   * @param path - path as written in the patch.
-   * @param workdir - working directory for relative paths.
-   * @param content - the complete new content.
-   */
   writeText(path: string, workdir: string, content: string): Promise<void>
-  /**
-   * Delete one file.
-   * @param path - path as written in the patch.
-   * @param workdir - working directory for relative paths.
-   */
   remove(path: string, workdir: string): Promise<void>
-  /**
-   * Write a renamed file and remove its source in that order.
-   * @param from - source path as written in the patch.
-   * @param to - destination path from `*** Move to:`.
-   * @param workdir - working directory for relative paths.
-   * @param content - the complete replacement content written to `to`.
-   */
   moveText(from: string, to: string, workdir: string, content: string): Promise<void>
 }
 
-/** Paths touched by one applied patch, in patch order per category. */
 export interface ApplyPatchAffected {
-  /** Created files. */
   readonly added: readonly string[]
-  /** Modified (and optionally renamed) files. */
   readonly modified: readonly string[]
-  /** Deleted files. */
   readonly deleted: readonly string[]
 }
 
-/**
- * Apply one parsed patch through the injected IO.
- * @param patch - the parsed patch.
- * @param cwd - the session working directory the patch resolves against.
- * @param io - consumer-bound file operations.
- * @returns the affected paths, as written in the patch.
- * @throws ApplyPatchError with upstream wording on unresolvable hunks.
- */
 export async function applyPatch(
   patch: ParsedPatch,
   cwd: string,
@@ -762,11 +616,6 @@ export async function applyPatch(
   return { added, modified, deleted }
 }
 
-/**
- * Format the git-style success summary upstream prints after applying.
- * @param affected - the affected paths.
- * @returns the `Success. Updated the following files:` summary text.
- */
 export function formatSummary(affected: ApplyPatchAffected): string {
   const lines = ['Success. Updated the following files:']
   for (const path of affected.added) lines.push(`A ${path}`)

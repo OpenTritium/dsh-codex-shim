@@ -12,7 +12,7 @@ import type {
   ModelOverrideDecision,
 } from './settings-card-controller.ts'
 import css from './CodexSettingsCard.module.css'
-import { modelRouteKey } from '../settings.ts'
+import { modelRouteKey } from '../codex-settings.ts'
 
 export interface CodexSettingsCardFace {
   hooks: { codexSettings: import('@deepseek-ai/dsh-client-runtime/client').SnapshotStore<CodexSettingsState> }
@@ -27,7 +27,6 @@ export interface CodexSettingsCardFace {
 
 type Props = PropsRuntime<'settings.plugin.item'> & PropsLocale<'codex'> & InjectFace<CodexSettingsCardFace>
 
-/** Render the OpenTritium Codex simulation settings card. */
 export function CodexSettingsCard(props: Props) {
   const [open, setOpen] = useState(false)
   const [addingModel, setAddingModel] = useState(false)

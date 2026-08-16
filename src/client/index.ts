@@ -1,5 +1,3 @@
-/** Browser-side Codex tool presentation: keyed rows with standard icons. */
-
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ISessions, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
@@ -20,20 +18,14 @@ import { en, NS, zh, type CodexKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** The Codex tool-row copy. */
     codex: CodexKey
   }
 }
 
-/** Browser services required by the keyed Codex tool rows. */
 export const inject = ['slots', 'locale', 'sessions']
 
 const CODEX_TOOL_NAMES = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'update_plan', 'web_run'] as const
 
-/**
- * Register Codex's keyed tool rows and their locale dictionaries.
- * @param ctx - browser root context carrying the slot and locale services.
- */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => {
     mountToolRowCss()
@@ -69,7 +61,6 @@ interface ImageResolver {
   dispose(): void
 }
 
-/** Resolve and cache session-authorized image URLs for tool-result previews. */
 function createImageResolver(sessions: ISessions): ImageResolver {
   const pending = new Map<string, Promise<string>>()
   const urls = new Set<string>()
@@ -118,7 +109,6 @@ function bytesToBase64(data: Uint8Array): string {
   return btoa(binary)
 }
 
-/** Mount the settings card once the settings transport is available. */
 function installSettings(ctx: ClientContext): void {
   const connection = ctx.get('connection') as ConnectionHandle
   const settings = new CodexSettingsCardController(

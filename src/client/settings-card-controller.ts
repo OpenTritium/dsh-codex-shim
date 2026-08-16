@@ -1,7 +1,7 @@
 import type { IApiClient, ModelProviderGroup } from '@deepseek-ai/dsh-client-connection/client'
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
-import { CODEX_SETTINGS_NS, modelRouteKey, type CodexModelOverride, type CodexSettings } from '../settings.ts'
+import { CODEX_SETTINGS_NS, modelRouteKey, type CodexModelOverride, type CodexSettings } from '../codex-settings.ts'
 
 export { CODEX_SETTINGS_NS }
 
@@ -65,10 +65,6 @@ function parsePatterns(text: string): string[] | undefined {
   return values.includes('*') && values.length > 1 ? undefined : values
 }
 
-function formatPatterns(value: unknown): string {
-  return Array.isArray(value) ? value.join('\n') : ''
-}
-
 function modelRows(groups: readonly ModelProviderGroup[], overrides: readonly ModelOverride[]): CodexModelRow[] {
   const known = new Map(
     groups.flatMap(group =>
@@ -114,7 +110,6 @@ function sameOverrides(left: readonly ModelOverride[], right: readonly ModelOver
   )
 }
 
-/** Owns staged edits, model-directory loading, and persistence for the Codex settings card. */
 export class CodexSettingsCardController {
   private readonly drafts = new Map<'enabled' | 'modelPatterns', string>()
   private readonly cleared = new Set<'enabled' | 'modelPatterns' | 'modelOverrides'>()
@@ -155,7 +150,9 @@ export class CodexSettingsCardController {
         ? current.enabled === undefined
           ? ''
           : String(current.enabled)
-        : formatPatterns(current.modelPatterns))
+        : Array.isArray(current.modelPatterns)
+          ? current.modelPatterns.join('\n')
+          : '')
     return {
       text,
       overridden: this.cleared.has(field)
@@ -226,7 +223,6 @@ export class CodexSettingsCardController {
     return this.store
   }
 
-  /** Dispose the settings subscription when the client plugin is unloaded. */
   dispose(): void {
     if (this.disposed) return
     this.disposed = true

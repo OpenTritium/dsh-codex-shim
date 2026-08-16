@@ -1,16 +1,4 @@
-/**
- * Model-route activation gate for the Codex environment simulation. While the
- * resolved route is enabled by its exact override or the configured patterns,
- * the global switch is on, and the scope can resolve a Codex tool, its prompt
- * assemblies swap to the codex surface: the persona becomes the ported Codex
- * instructions, the advertised tool list keeps only compatible names, and the
- * same assembly receives Codex-form environment and permission contexts. Other
- * routes keep the host composition's own surface minus the codex tools. Both
- * sets stay registered and dispatchable either way, so a mid-session model
- * switch flips the advertisement on the next step without history
- * inconsistencies — the flip lands in the logged `request/header`.
- * @module @opentritium/dsh-codex-shim/gate
- */
+/** Route gate for the Codex prompt, tool advertisement, and policy surface. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -24,39 +12,27 @@ import type { AssembleContext, PromptAssembly } from '@deepseek-ai/dsh-system-pr
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-tools'
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
-import { CODEX_PERSONA } from './instructions.ts'
-import { CODEX_SETTINGS_NS, type CodexModelOverride } from './settings.ts'
+import { CODEX_PERSONA } from './codex-instructions.ts'
+import { CODEX_SETTINGS_NS, type CodexModelOverride } from './codex-settings.ts'
 
-/** Cordis plugin name. */
 export const name = 'opentritium-codex-gate'
-/** The prompt registry whose assemblies this gate rewrites. */
 export const inject = ['systemPrompt', 'tools']
 
-/** Settings namespace of the codex simulation, layered under `settings.yaml`. */
 export const CODEX_SETTINGS_NAMESPACE = settingsNamespace(CODEX_SETTINGS_NS)
 
-/** Gate configuration: composition base, user-overridable through settings. */
 export interface Config {
-  /** Global switch; false disables the simulation for every route. */
   enabled: boolean
-  /**
-   * Glob-style model patterns (`*` matches any character run, matched
-   * anywhere in the model id). Any match activates the codex surface. Defaults
-   * to the GPT-5.6 family; an explicit empty list disables pattern matching.
-   */
+  /** Empty disables automatic matching; the bundle defaults to `gpt-5.6-*`. */
   modelPatterns: string[]
-  /** Exact route decisions that take precedence over {@link modelPatterns}. */
   modelOverrides: CodexModelOverride[]
 }
 
-/** Runtime schema for the gate row. */
 export const Config: z<Config> = z.object({
   enabled: z.boolean().default(true),
   modelPatterns: z.array(z.string()).default(['gpt-5.6-*']),
   modelOverrides: z.array(z.object({ provider: z.string(), model: z.string(), enabled: z.boolean() })).default([]),
 })
 
-/** Tool names this family registers (hidden from advertisement while inactive). */
 const CODEX_TOOL_NAMES: ReadonlySet<string> = new Set([
   'exec_command',
   'write_stdin',
@@ -68,7 +44,6 @@ const CODEX_TOOL_NAMES: ReadonlySet<string> = new Set([
   'web_run',
 ])
 
-/** Canonical tools advertised while compatibility aliases remain executable. */
 const CODEX_ADVERTISED_TOOL_NAMES: ReadonlySet<string> = new Set([
   'exec_command',
   'write_stdin',
@@ -95,44 +70,29 @@ const CODEX_SHIM_REPLACEMENTS: readonly CodexShimReplacement[] = [
   { requires: ['web_run'], masks: ['web_search'] },
 ]
 
-/** Persona section name while the codex surface is active. */
 const CODEX_PERSONA_SECTION = 'codex:persona'
 
-/** Guidance appended only when the Codex web-search shim is visible. */
 const CODEX_WEB_RUN_GUIDANCE = [
   '## Web search',
   'Use `web_run` when current public information is needed. Pass one or more concise `search_query` entries such as `{ "q": "..." }`.',
   'This tool searches only. Do not request `open`, `click`, or `find` operations; cite returned source URLs as Markdown links.',
 ].join('\n')
 
-/** Dynamic-context name of the environment block. */
 const CODEX_ENVIRONMENT_CONTEXT = 'codex:environment'
 
-/** Host context names whose authoritative values receive Codex wording. */
 const SANDBOX_POLICY_CONTEXT = 'sandbox:policy'
 const APPROVAL_POLICY_CONTEXT = 'approval:policy'
 
-/** Per-assembly permission state resolved from the same session as execution. */
 interface CodexPermissions {
-  /** Complete file policy, when that service is composed. */
   sandbox: SandboxExecutionPolicy | undefined
-  /** Effective approval policy, when that service is composed. */
   approval: ApprovalPolicy | undefined
 }
 
-/** One prompt assembly's route decision and the fact that determined it. */
 interface RouteActivation {
-  /** Whether the Codex advertisement applies to the assembly. */
   active: boolean
-  /** The decisive route-policy condition, suitable for debug diagnostics. */
   reason: string
 }
 
-/**
- * Compile one glob-style pattern into a matcher over model ids.
- * @param pattern - user/composition pattern; empty or `*` matches everything.
- * @returns a predicate over model ids, or undefined when the pattern matches all.
- */
 function compilePattern(pattern: string): ((model: string) => boolean) | undefined {
   if (pattern.length === 0 || pattern === '*') return undefined
   const source = pattern
@@ -143,25 +103,10 @@ function compilePattern(pattern: string): ((model: string) => boolean) | undefin
   return model => regex.test(model)
 }
 
-/**
- * Whether one model id matches the configured patterns.
- * @param model - the resolved model id.
- * @param patterns - the configured glob-style patterns.
- * @returns true when any pattern matches.
- */
 export function modelMatches(model: string, patterns: readonly string[]): boolean {
   return patterns.some(pattern => compilePattern(pattern)?.(model) ?? true)
 }
 
-/**
- * Resolve the route this assembly is for. Each field first reads the
- * assembly's own variables (which the model-selection waterfall may have
- * overridden), then the session's last logged request header, then the
- * agent's creation options.
- * @param assembled - the assembled prompt variables.
- * @param context - the per-assembly context.
- * @returns the provider/model pair, or empty fields on agent-less diagnostics assemblies.
- */
 function resolveRoute(
   assembled: PromptAssembly['variables'],
   context: AssembleContext,
@@ -174,26 +119,11 @@ function resolveRoute(
   }
 }
 
-/**
- * Look up the exact setting for one complete provider/model route.
- * @param config - the currently authoritative gate settings.
- * @param provider - the route's registered provider.
- * @param model - the provider-owned model id.
- * @returns the route decision, or undefined when the glob list decides it.
- */
 function modelOverrideFor(config: Config, provider: string | undefined, model: string): boolean | undefined {
   if (provider === undefined) return undefined
   return config.modelOverrides.find(override => override.provider === provider && override.model === model)?.enabled
 }
 
-/**
- * Whether this scope resolves any Codex tool. The gate mounts globally so the
- * settings namespace exists before an agent is created; only agent presets
- * that contribute Codex tools may receive the matching prompt surface.
- * @param ctx - context holding the scope-aware tool registry.
- * @param scope - scope for the assembly currently being built.
- * @returns true when a Codex tool is visible within the scope.
- */
 function hasCodexTool(ctx: Context, scope: AssembleContext['scope']): boolean {
   return [...CODEX_TOOL_NAMES].some(toolName => ctx.tools.get(toolName, scope) !== undefined)
 }
@@ -209,23 +139,10 @@ function maskedHostToolNames(tools: PromptAssembly['tools']): ReadonlySet<string
   return masked
 }
 
-/**
- * Render the active persona with only the tool guidance available to this scope.
- * @param tools - unfiltered schemas resolved for this prompt assembly.
- * @returns the Codex persona text for the visible tool set.
- */
 function personaFor(tools: PromptAssembly['tools']): string {
   return tools.some(tool => tool.name === 'web_run') ? `${CODEX_PERSONA}\n\n${CODEX_WEB_RUN_GUIDANCE}` : CODEX_PERSONA
 }
 
-/**
- * Resolve the Codex advertisement policy for one assembly.
- * @param ctx - context holding the scope-aware tool registry.
- * @param config - the currently authoritative gate settings.
- * @param route - the resolved provider/model pair.
- * @param scope - scope for the assembly currently being built.
- * @returns whether the surface swaps in and the condition that decided it.
- */
 function activationFor(
   ctx: Context,
   config: Config,
@@ -241,11 +158,6 @@ function activationFor(
   return { active, reason: active ? 'a model pattern match' : 'no model pattern match' }
 }
 
-/**
- * Render the Codex `<environment_context>` block for one active assembly.
- * @param context - the per-assembly context.
- * @returns the XML block.
- */
 function renderEnvironmentContext(context: AssembleContext): string {
   const agent: Agent | undefined = context.agent
   const cwd = agent?.session.header.cwd ?? process.cwd()
@@ -260,12 +172,6 @@ function renderEnvironmentContext(context: AssembleContext): string {
   ].join('\n')
 }
 
-/**
- * Resolve the file and approval policies that govern one active assembly.
- * @param ctx - context carrying optional policy services.
- * @param context - assembly context carrying the owning agent.
- * @returns both effective policies; absent services remain absent.
- */
 function resolvePermissions(ctx: Context, context: AssembleContext): CodexPermissions {
   const agent = context.agent
   const sandboxPolicy = ctx.get('sandboxPolicy')
@@ -282,11 +188,6 @@ function resolvePermissions(ctx: Context, context: AssembleContext): CodexPermis
   }
 }
 
-/**
- * Return the strictly wider modes one command may request from a standing mode.
- * @param mode - the effective file policy.
- * @returns escalation targets in increasing access order.
- */
 function widerModes(mode: SandboxMode): readonly SandboxMode[] {
   switch (mode) {
     case 'read-only':
@@ -303,11 +204,6 @@ function widerModes(mode: SandboxMode): readonly SandboxMode[] {
   }
 }
 
-/**
- * Render one effective file policy in the vocabulary Codex models expect.
- * @param policy - complete dsh file policy for this session.
- * @returns model-facing Codex sandbox text without claiming network policy.
- */
 function renderSandboxPolicy(policy: SandboxExecutionPolicy): string {
   switch (policy.mode) {
     case 'read-only':
@@ -324,23 +220,12 @@ function renderSandboxPolicy(policy: SandboxExecutionPolicy): string {
   }
 }
 
-/**
- * Render the effective approval policy against the fields the active schema exposes.
- * @param policy - session approval policy.
- * @returns model-facing Codex approval guidance.
- */
 function renderApprovalPolicy(policy: ApprovalPolicy): string {
   return policy === 'never'
     ? 'Approval policy is currently never. Do not provide `sandbox_permissions` for any reason; commands that request escalation are rejected.'
     : 'Approval policy is currently ask. After a command fails because of sandboxing, retry that exact command once with `sandbox_permissions` set to the narrowest advertised wider mode and include a one-sentence `justification`. The request fails closed when no approval channel is available.'
 }
 
-/**
- * Make the advertised escalation fields truthful for this session.
- * @param tool - one already-filtered tool schema.
- * @param permissions - effective file and approval policies.
- * @returns the original tool or a detached schema with session-valid fields.
- */
 function adaptToolSchema(
   tool: PromptAssembly['tools'][number],
   permissions: CodexPermissions,
@@ -363,12 +248,6 @@ function adaptToolSchema(
   return { ...tool, parameters: { ...parameters, properties: nextProperties } }
 }
 
-/**
- * Replace host policy prose with Codex wording while retaining source names.
- * @param contexts - contexts assembled by authoritative host services.
- * @param permissions - values resolved from those same services.
- * @returns detached active-route contexts.
- */
 function adaptContexts(
   contexts: PromptAssembly['contexts'],
   permissions: CodexPermissions,
@@ -384,23 +263,11 @@ function adaptContexts(
   })
 }
 
-/**
- * Escape one XML text node.
- * @param text - the raw text.
- * @returns the escaped text.
- */
 function escapeXml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-/**
- * Register the codex gate: settings section, environment-context contributor,
- * and the assembly waterfall that swaps the surface per model route.
- * @param ctx - registrant context inside the composition whose scope holds the codex rows.
- * @param config - composition entry config (schema defaults already applied); the settings layer overrides it.
- */
 export function apply(ctx: Context, config: Config): void {
-  /** The currently authoritative settings: the resolved scope, else the entry. */
   let source: () => Config = () => config
   const logger = ctx.logger('codex-gate')
   installSettingsSection(ctx, CODEX_SETTINGS_NAMESPACE, Config, config, {
@@ -409,8 +276,6 @@ export function apply(ctx: Context, config: Config): void {
     setSource: current => {
       source = current
     },
-    // Every field is read through the source at each assembly, so nothing
-    // derived needs rebuilding when the document changes.
     onChange: () => {
       const current = source()
       logger.info(
@@ -435,7 +300,6 @@ export function apply(ctx: Context, config: Config): void {
       activation.reason,
     )
     if (!activation.active) {
-      // Hide the codex family while the host's own surface serves this route.
       return { ...assembled, tools: assembled.tools.filter(tool => !CODEX_TOOL_NAMES.has(tool.name)) }
     }
     const permissions = resolvePermissions(ctx, context)
@@ -460,11 +324,6 @@ export function apply(ctx: Context, config: Config): void {
   })
 }
 
-/**
- * Reject a resolved section this gate could not act on: patterns must be
- * usable, checked where the value is written.
- * @param config - the resolved section, schema-valid by construction.
- */
 export function assertServiceableConfig(config: Config): void {
   if (config.modelPatterns.some(pattern => pattern.trim().length === 0 && pattern.length > 0)) {
     throw new Error('codex-gate: model patterns must not be whitespace-only')

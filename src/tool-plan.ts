@@ -1,11 +1,4 @@
-/**
- * Model-facing `update_plan` tool: the Codex plan/checklist surface over the
- * same durable `todo/write` session events the `todos` projection folds, so a
- * deployment composing both surfaces keeps one checklist per session. The
- * schema, statuses, single-active discipline, and `Plan updated` result
- * follow upstream Codex verbatim.
- * @module @opentritium/dsh-codex-shim/tool-plan
- */
+/** Codex `update_plan` over the durable `todo/write` session events. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis'
@@ -14,13 +7,10 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type { TodoItem } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session'
 
-/** Cordis plugin name. */
 export const name = 'opentritium-codex-plan'
 
-/** The prompt registry receives no row here; the codex persona owns guidance. */
 export const inject = ['tools']
 
-/** The valid {@link TodoItem} statuses, as a runtime set for input narrowing. */
 const STATUSES = ['pending', 'in_progress', 'completed'] as const
 
 interface UpdatePlanArgs {
@@ -28,13 +18,6 @@ interface UpdatePlanArgs {
   plan: { step: string; status: string }[]
 }
 
-/**
- * Validate the value constraints the schema cannot express and build the
- * canonical {@link TodoItem}[]: non-empty steps and at most one
- * `in_progress` item, exactly upstream's discipline.
- * @param raw - the model-supplied plan, already schema-checked.
- * @returns the canonical list.
- */
 function toTodoList(raw: UpdatePlanArgs['plan']): TodoItem[] {
   const todos: TodoItem[] = []
   let active = 0
@@ -50,11 +33,6 @@ function toTodoList(raw: UpdatePlanArgs['plan']): TodoItem[] {
   return todos
 }
 
-/**
- * Present one `update_plan` call as a generic card over the plan steps.
- * @param args - the validated tool arguments.
- * @returns the generic call view.
- */
 export function presentPlanCall(args: UpdatePlanArgs): {
   card: 'generic'
   title: string
@@ -64,10 +42,6 @@ export function presentPlanCall(args: UpdatePlanArgs): {
   return { card: 'generic', title: 'Update plan', kind: 'other', rawInput: args.plan }
 }
 
-/**
- * Register the `update_plan` tool on `ctx.tools`.
- * @param ctx - registrant context carrying the tool registry.
- */
 export function apply(ctx: Context): void {
   ctx.tools.register(
     defineTool({
@@ -99,8 +73,7 @@ export function apply(ctx: Context): void {
       execute(args, exec) {
         const todos = toTodoList(args.plan)
         if (exec.agent === undefined) {
-          // The checklist is per-agent-session state; a non-agent caller has
-          // nowhere to write it. Reject rather than silently no-op.
+          // A checklist without an owning agent session cannot be persisted.
           throw new Error('update_plan requires an owning agent session')
         }
         exec.agent.session.append('todo/write', { todos })

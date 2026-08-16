@@ -1,21 +1,9 @@
-/** Parsed stream sections from the unified exec response text. */
 export interface TerminalOutputSections {
-  /** Text before the stderr marker, excluding the response metadata. */
   stdout: string
-  /** Text after the stderr marker. */
   stderr: string
 }
 
-/**
- * Split the published unified-exec response into stdout and stderr.
- *
- * The upstream shell capability emits response metadata followed by an
- * `Output:` line and marks stderr with `[stderr]`. Text before `Output:` is
- * intentionally discarded because it belongs to the status summary.
- *
- * @param text - rendered unified-exec response text.
- * @returns the two stream bodies, preserving their original line contents.
- */
+/** Strip the DSH status envelope and split the remaining output streams. */
 export function splitTerminalOutput(text: string): TerminalOutputSections {
   const outputMarker = '\nOutput:\n'
   const outputStart = text.indexOf(outputMarker)

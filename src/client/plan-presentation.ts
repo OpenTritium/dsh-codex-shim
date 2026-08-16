@@ -1,5 +1,3 @@
-/** Defensive parsing for the model-produced update_plan argument JSON. */
-
 export type PlanStatus = 'pending' | 'in_progress' | 'completed'
 
 export interface PlanItemPresentation {
@@ -12,15 +10,7 @@ export interface PlanPresentation {
   items: PlanItemPresentation[]
 }
 
-/**
- * Keep only steps whose status changed since the preceding plan update.
- * When no status changed, retain the complete plan so an idempotent update
- * still has useful content in its expanded row.
- *
- * @param current - items from the current update.
- * @param previous - items from the preceding update, when available.
- * @returns the steps relevant to this update.
- */
+/** Keep changed steps; retain the full plan when an update is idempotent. */
 export function changedPlanItems(
   current: readonly PlanItemPresentation[],
   previous: readonly PlanItemPresentation[] | undefined,
@@ -37,18 +27,7 @@ function objectValue(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-function planStatus(value: unknown): PlanStatus | undefined {
-  return value === 'pending' || value === 'in_progress' || value === 'completed' ? value : undefined
-}
-
-/**
- * Parse a complete `update_plan` argument object for structured presentation.
- * Invalid or incomplete model JSON returns undefined so the caller can retain
- * the generic raw representation rather than hiding model-visible content.
- *
- * @param argsRaw - raw tool arguments emitted by the model.
- * @returns display-ready plan data, or undefined when it is not trustworthy.
- */
+/** Parse model JSON without hiding malformed input from the generic row. */
 export function parsePlanPresentation(argsRaw: string): PlanPresentation | undefined {
   try {
     const args = objectValue(JSON.parse(argsRaw))
@@ -57,7 +36,10 @@ export function parsePlanPresentation(argsRaw: string): PlanPresentation | undef
     for (const candidate of args.plan) {
       const item = objectValue(candidate)
       const step = typeof item?.step === 'string' ? item.step.trim() : ''
-      const status = planStatus(item?.status)
+      const status =
+        item?.status === 'pending' || item?.status === 'in_progress' || item?.status === 'completed'
+          ? item.status
+          : undefined
       if (step === '' || status === undefined) return undefined
       items.push({ step, status })
     }

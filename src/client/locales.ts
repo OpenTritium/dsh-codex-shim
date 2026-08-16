@@ -1,9 +1,5 @@
-/** Locale dictionaries for the Codex tool rows. */
-
-/** Dictionary namespace owned by this plugin. */
 export const NS = 'codex'
 
-/** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'settings.title': 'Codex 环境模拟',
   'settings.description': '为选定的模型模拟 Codex Tool，让 GPT 系列模型感觉回家了一样。',
@@ -68,10 +64,8 @@ export const zh = {
   'row.inspect': '检查',
 } satisfies Record<string, string>
 
-/** Codex dictionary key union. */
 export type CodexKey = keyof typeof zh
 
-/** English dictionary, checked complete against the zh key set. */
 export const en = {
   'settings.title': 'Codex environment simulation',
   'settings.description':

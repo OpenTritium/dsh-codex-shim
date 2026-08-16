@@ -172,6 +172,32 @@
   min-width: 0;
 }
 
+.webSearches {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.webSearchGroup {
+  min-width: 0;
+}
+
+.webQuery {
+  margin: 0 0 4px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webSearchCard {
+  min-width: 0;
+}
+
 .planItems {
   display: flex;
   flex-direction: column;

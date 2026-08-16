@@ -1,5 +1,3 @@
-/** Image-reading helpers built only on public filesystem and attachment services. */
-
 import { basename, extname } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
@@ -8,7 +6,6 @@ import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { FsError } from '@deepseek-ai/dsh-fs'
 import type { ToolExecution } from '@deepseek-ai/dsh-tools'
 
-/** Image result retained by the Codex-compatible tool. */
 export interface ImageReadValue {
   path: string
   image: {
@@ -29,7 +26,6 @@ const IMAGE_TYPES: Readonly<Record<string, ImageMediaType>> = {
   '.gif': 'image/gif',
 }
 
-/** Render a stored image into model-visible text and image blocks. */
 export function imageReadContent(value: ImageReadValue): ContentBlock[] {
   const image: ImageAttachmentRef = {
     attachmentId: AttachmentId(value.image.attachmentId),
@@ -48,7 +44,6 @@ export function imageReadContent(value: ImageReadValue): ContentBlock[] {
   ]
 }
 
-/** Read, validate, and persist a local image through public DSH capabilities. */
 export async function readImage(ctx: Context, exec: ToolExecution, path: string): Promise<ImageReadValue> {
   if (path.trim().length === 0) throw new Error('path must be a non-empty string')
   const mediaType = IMAGE_TYPES[extname(path).toLowerCase()]

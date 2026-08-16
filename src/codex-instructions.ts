@@ -5,10 +5,9 @@
  * file edits use the directly advertised JSON `apply_patch` tool; permission
  * retries follow the current runtime-context policy. Everything else stays
  * near-verbatim so models trained on Codex meet the instructions they expect.
- * @module @opentritium/dsh-codex-shim/instructions
+ * @module @opentritium/dsh-codex-shim/codex-instructions
  */
 
-/** The complete persona section text used while the codex surface is active. */
 export const CODEX_PERSONA = `You are a coding agent running in the Codex CLI, a terminal-based coding assistant. Codex CLI is an open source project led by OpenAI. You are expected to be precise, safe, and helpful.
 
 Your capabilities:

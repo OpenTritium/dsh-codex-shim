@@ -1,14 +1,4 @@
-/**
- * Model-facing Consumer presenting the Codex unified-exec surface —
- * `exec_command`, `write_stdin`, `apply_patch`, and `view_image` — over the
- * shell, filesystem, and attachment capabilities. Patch execution stays
- * inside the dsh-apply-patch engine before any process spawns. Result text
- * follows upstream Codex (commit `636e505c`); compatibility patch names stay
- * executable but never enter an assembled tool list, and unsupported arguments
- * are absent rather than accepted as no-ops. Execution, sandbox escalation,
- * and filesystem policy stay dsh-owned.
- * @module @opentritium/dsh-codex-shim/tool-exec
- */
+/** Codex unified-exec consumers over DSH shell, filesystem, and attachments. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { isAbsolute, dirname, resolve as resolvePath } from 'node:path'
@@ -28,8 +18,8 @@ import type { ShellProcess, ShellProcessRead } from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import { ApplyPatchError, applyPatch, formatSummary, parseInvocation, parsePatch } from './apply-patch.ts'
 import type { ApplyPatchIo, ApplyPatchInvocation } from './apply-patch.ts'
-import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
-import { imageReadContent, readImage } from './image.ts'
+import { computeHunkDiffs, diffsFromMeta } from './patch-diff.ts'
+import { imageReadContent, readImage } from './image-reader.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {
   DiffCallView,
@@ -46,21 +36,15 @@ import { presentExecCall, presentExecResult, presentWriteStdinCall } from './exe
 import { ExecSessionRegistry } from './exec-sessions.ts'
 import { createDirectoryCommand, removeFileCommand } from './exec-shell.ts'
 
-/** Cordis plugin name. */
 export const name = 'opentritium-codex-exec'
-/** Required prompt, tool, and shell services; fs, sandbox, and approval resolve optionally. */
 export const inject = ['systemPrompt', 'tools', 'shell']
 
 const APPLY_PATCH_ALIASES: ReadonlySet<string> = new Set(['apply-patch', 'applypatch'])
 
-/** Yield-window floor and ceiling shared by both tools, upstream's range. */
 const YIELD_MIN_MS = 250
 const YIELD_MAX_MS = 30_000
-/** write_stdin's empty-poll window: longer, per upstream. */
 const POLL_MAX_MS = 300_000
-/** Poll cadence while waiting for output or exit. */
 const POLL_TICK_MS = 25
-/** Budget for the engine's rm/mv/mkdir helper commands. */
 const HELPER_TIMEOUT_MS = 10_000
 
 interface ExecCommandArgs {
@@ -98,7 +82,6 @@ interface ViewImageArgs {
   path: string
 }
 
-/** Stable non-interactive environment used by upstream unified exec. */
 const UNIFIED_EXEC_ENV: Readonly<Record<string, string>> = {
   NO_COLOR: '1',
   TERM: 'dumb',
@@ -112,13 +95,6 @@ const UNIFIED_EXEC_ENV: Readonly<Record<string, string>> = {
   CODEX_CI: '1',
 }
 
-/**
- * Clamp a yield window into its effective range.
- * @param requested - the model's `yield_time_ms`, when given.
- * @param fallback - the default window for this call shape.
- * @param max - the ceiling for this call shape.
- * @returns the bounded wait in milliseconds.
- */
 function clampYield(requested: number | undefined, fallback: number, max: number): number {
   if (requested === undefined) return fallback
   if (!Number.isSafeInteger(requested) || requested < 0) {
@@ -127,15 +103,6 @@ function clampYield(requested: number | undefined, fallback: number, max: number
   return Math.min(Math.max(requested, YIELD_MIN_MS), max)
 }
 
-/**
- * Resolve an explicit workdir against the session cwd, mirroring the bash
- * tool's rules: a resolved sandbox root wins, a relative path joins the
- * session cwd, and an absolute path passes through.
- * @param modelWorkdir - the model's `workdir` argument.
- * @param exec - the tool execution carrying the owning agent.
- * @param policyWorkspaceRoot - the standing policy's workspace root.
- * @returns the resolved absolute workdir, or undefined to let the executor default.
- */
 function resolveWorkdir(
   modelWorkdir: string | undefined,
   exec: { agent?: Agent },
@@ -150,11 +117,6 @@ function resolveWorkdir(
   return modelWorkdir
 }
 
-/**
- * Resolve one unresolved execution error into a thrown error with upstream
- * wording, so an `apply_patch` failure reads like Codex's.
- * @param error - the engine's failure.
- */
 function rethrowUpstream(error: unknown): never {
   if (error instanceof ApplyPatchError) {
     throw new Error(`apply_patch verification failed: ${error.message}`, { cause: error })
@@ -162,24 +124,13 @@ function rethrowUpstream(error: unknown): never {
   throw error
 }
 
-/**
- * Wait for process output or exit inside one yield window, draining deltas.
- * The process is never wired to the tool-call signal: a still-running command
- * survives the call (and a turn abort) as a background session, matching
- * upstream's unified-exec lifetime.
- * @param proc - the live process handle.
- * @param yieldMs - the bounded wait.
- * @param signal - the tool-call signal; it only cuts the wait short.
- * @returns the captured output and whether the process settled.
- */
+// Keep an unsettled process available for a later write_stdin call.
 async function drainWindow(
   proc: ShellProcess,
   yieldMs: number,
   signal: AbortSignal,
 ): Promise<{ output: string; settled: boolean; lossy: boolean; spillPaths: string[] }> {
   const started = Date.now()
-  // A box keeps the closure assignment out of the control-flow narrowing that
-  // would otherwise read the local's initial literal for the whole loop.
   const state = { settled: false }
   const done = proc.done.then(() => {
     state.settled = true
@@ -201,13 +152,6 @@ async function drainWindow(
   return { output, settled: state.settled, lossy, spillPaths: [...spillPaths] }
 }
 
-/**
- * Append collection and sandbox notices to one process delta before token truncation.
- * @param drain - captured output and collection metadata.
- * @param proc - process carrying settled sandbox facts.
- * @param escalationAvailable - whether this session can ask for a wider retry.
- * @returns output with every independent notice represented.
- */
 function outputWithNotices(
   drain: Awaited<ReturnType<typeof drainWindow>>,
   proc: ShellProcess,
@@ -231,15 +175,6 @@ function outputWithNotices(
   return `${drain.output}${drain.output.length > 0 && !drain.output.endsWith('\n') ? '\n' : ''}${notices.join('\n')}`
 }
 
-/**
- * Build the canonical value for one finished or still-running drain.
- * @param drain - the drain result.
- * @param proc - the live process handle.
- * @param startedAt - the call's start time.
- * @param maxTokens - the output token budget.
- * @param sessionId - the numeric session id, when the process still runs.
- * @returns the canonical exec value.
- */
 function toValue(
   drain: Awaited<ReturnType<typeof drainWindow>>,
   proc: ShellProcess,
@@ -260,23 +195,11 @@ function toValue(
   }
 }
 
-/** The exec tools' shared composition state. */
 interface ExecRuntime {
   ctx: Context
   sessions: ExecSessionRegistry
 }
 
-/**
- * Build the apply-patch IO adapter binding reads/writes to the fs capability
- * (policy-fenced) and removals/moves/parent-dir creation to one-shot helper
- * shell commands under the same sandbox policy.
- * @param runtime - the plugin's composition state.
- * @param fs - the mounted filesystem service.
- * @param baseCwd - the effective base directory for relative patch paths.
- * @param policy - the resolved per-call sandbox policy.
- * @param signal - the tool-call signal.
- * @returns the engine's IO surface.
- */
 function makePatchIo(
   runtime: ExecRuntime,
   fs: FileSystem,
@@ -389,17 +312,6 @@ function patchDiffs(changes: readonly PatchFileChange[]): FileDiff[] {
   )
 }
 
-/**
- * Handle an `apply_patch` invocation without spawning a process: parse, apply
- * through the fs/shell-bound IO, and return the upstream summary as the
- * command's output.
- * @param runtime - the plugin's composition state.
- * @param invocation - the classified invocation.
- * @param baseCwd - the effective base directory for the patch's paths.
- * @param policy - the resolved per-call sandbox policy.
- * @param signal - the tool-call signal.
- * @returns the canonical value carrying the summary.
- */
 async function runIntercepted(
   runtime: ExecRuntime,
   invocation: Exclude<ApplyPatchInvocation, { kind: 'none' }>,
@@ -426,17 +338,6 @@ async function runIntercepted(
   }
 }
 
-/**
- * Parse and apply one raw patch body through the policy-fenced filesystem IO.
- * @param runtime - the plugin's composition state.
- * @param fs - the mounted filesystem service.
- * @param input - the raw `*** Begin Patch` document.
- * @param baseCwd - the effective base directory for relative patch paths.
- * @param policy - the resolved per-call sandbox policy.
- * @param signal - the tool-call signal.
- * @param workdir - an optional workdir parsed from a shell interception.
- * @returns the upstream patch summary and applied before/after texts.
- */
 async function applyPatchInput(
   runtime: ExecRuntime,
   fs: FileSystem,
@@ -481,19 +382,10 @@ function presentApplyPatchResult(_args: ApplyPatchArgs, result: ToolResult): Dif
   return diffs === undefined ? undefined : { card: 'diff', title: 'Apply patch', diffs }
 }
 
-/**
- * Present a `view_image` request as a read card on its requested path.
- * @param args - the validated image-read arguments.
- * @returns the generic image-read card.
- */
 function presentViewImageCall(args: ViewImageArgs): GenericCallView {
   return { card: 'generic', title: `View image ${args.path}`, kind: 'read', locations: [{ path: args.path }] }
 }
 
-/**
- * Register the Codex unified-exec tools on `ctx.tools`.
- * @param ctx - registrant context carrying the prompt, tool, and shell services.
- */
 export function apply(ctx: Context): void {
   const runtime: ExecRuntime = { ctx, sessions: new ExecSessionRegistry() }
   ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
@@ -507,11 +399,9 @@ export function apply(ctx: Context): void {
   if (defaultMode !== undefined && sandboxPolicy === undefined) {
     throw new Error('tool-codex-exec: the mounted shell executor confines but ctx.sandboxPolicy is missing')
   }
-  /** Resolve the complete standing policy for this call when a confining executor is mounted. */
   const resolveSandboxPolicy = (exec: ToolExecution): SandboxExecutionPolicy | undefined =>
     sandboxPolicy?.resolve(exec.agent === undefined ? {} : { session: exec.agent.session })
 
-  /** Whether this exact session can route an escalation question. */
   const canAskForEscalation = (exec: ToolExecution): boolean => {
     const approval = ctx.get('approval')
     return (
@@ -521,7 +411,6 @@ export function apply(ctx: Context): void {
     )
   }
 
-  /** Resolve a sandbox-escalation request through `ctx.approval`, mirroring the bash tool. */
   const approveExecEscalation = (
     mode: string,
     justification: string,
@@ -736,7 +625,7 @@ export function apply(ctx: Context): void {
         if (!drain.settled) {
           const agent = exec.agent
           if (agent === undefined) {
-            // No owning session can ever poll this process; stop it now.
+            // Without an owning agent, no caller can poll this process.
             proc.kill()
             throw new Error('exec_command: a non-agent caller cannot hold a running session')
           }

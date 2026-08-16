@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatWebRunOutput, parseWebRunArgs, presentWebRunResult, webRunMetaFromValue } from '../src/tool-web.ts'
+import { parseWebRunView } from '../src/web-run-presentation.ts'
 
 describe('web_run', () => {
   it('keeps the Codex surface search-only', () => {
@@ -78,5 +79,38 @@ describe('web_run', () => {
         },
       ],
     })
+  })
+
+  it('parses the shared single and grouped web presentation shapes', () => {
+    expect(
+      parseWebRunView({
+        card: 'web',
+        kind: 'search',
+        title: 'harness',
+        sources: [{ url: 'https://example.test/docs' }],
+        truncated: false,
+      }),
+    ).toEqual({
+      card: 'web',
+      kind: 'search',
+      title: 'harness',
+      sources: [{ url: 'https://example.test/docs' }],
+      truncated: false,
+    })
+    expect(
+      parseWebRunView({
+        card: 'web',
+        kind: 'searches',
+        results: [{ query: 'first', sources: [], truncated: false }],
+      }),
+    ).toEqual({
+      card: 'web',
+      kind: 'searches',
+      results: [{ query: 'first', sources: [], truncated: false }],
+    })
+    expect(parseWebRunView({ card: 'web', kind: 'searches', results: [{ query: '', sources: [], truncated: false }] })).toBe(
+      undefined,
+    )
+    expect(parseWebRunView({ card: 'web', kind: 'fetch', url: 'https://example.test', statusCode: 200 })).toBe(undefined)
   })
 })

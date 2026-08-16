@@ -136,6 +136,49 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
+.imageCard {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, auto) minmax(180px, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-base);
+}
+
+.imageMeta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.imageMeta > div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+.imageMeta dt {
+  color: var(--dsw-alias-label-caption);
+}
+
+.imageMeta dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workdir {
   display: block;
   padding: 0 10px 8px;
@@ -176,6 +219,12 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .imageCard {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

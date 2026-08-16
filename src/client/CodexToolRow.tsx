@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { MessageImage } from '@deepseek-ai/dsh-client-ui-attachment'
 import {
   DiffBlock,
   DisclosureRow,
@@ -18,6 +20,7 @@ import css from './CodexToolRow.module.css'
 import { splitTerminalOutput } from './terminal-output.ts'
 
 type CodexToolRowProps = ToolCallViewProps & PropsLocale<'codex'>
+type ImageLoader = (attachment: ImageAttachmentRef) => Promise<string>
 type CodexRowState = 'running' | 'ok' | 'error' | 'stopped'
 
 function firstLine(value: string): string {
@@ -31,11 +34,22 @@ function argsOf(block: ToolCallBlock): string {
 
 function resultText(block: ToolCallBlock): string | null {
   if (!('kind' in block)) return null
-  const parts = block.content.map(item => item.type === 'text' ? item.text : JSON.stringify(item, null, 2))
+  const parts = block.content.flatMap(item => item.type === 'text' ? [item.text] : [])
   if (parts.length === 0 && block.error !== undefined) {
     parts.push(`${block.error.name}: ${block.error.code}`)
   }
   return parts.join('\n') || null
+}
+
+function imageAttachment(block: ToolCallBlock): ImageAttachmentRef | undefined {
+  if (!('kind' in block)) return undefined
+  return block.content.find(item => item.type === 'image')?.attachment
+}
+
+function imageSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function patchDiffs(block: ToolCallBlock): DiffHunk[] | null {
@@ -154,11 +168,12 @@ function leadingFor(state: CodexRowState, icon: ReactNode): ReactNode {
  * @param props - keyed toolview props and the Codex locale seat.
  * @returns the Codex tool row.
  */
-export function CodexToolRow({ toolName, block, inspect, t }: CodexToolRowProps) {
+export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: CodexToolRowProps & { imageLoader?: ImageLoader }) {
   const [expanded, setExpanded] = useState(false)
   const state = rowState(block)
   const argsRaw = argsOf(block)
   const output = resultText(block)
+  const image = toolName === 'view_image' ? imageAttachment(block) : undefined
   const terminalOutput = toolName === 'exec_command' || toolName === 'write_stdin'
     ? splitTerminalOutput(output ?? '')
     : null
@@ -167,7 +182,7 @@ export function CodexToolRow({ toolName, block, inspect, t }: CodexToolRowProps)
   const stdin = toolName === 'write_stdin' ? stringArg(args, 'chars') : undefined
   const workdir = toolName === 'exec_command' ? stringArg(args, 'workdir') : undefined
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
-  const expandable = diff !== null || argsRaw !== '' || output !== null
+  const expandable = diff !== null || argsRaw !== '' || output !== null || image !== undefined
   const open = expanded && expandable
   const outputSummary = state === 'error' && output !== null
     ? firstLine(terminalOutput?.stderr || terminalOutput?.stdout || output)
@@ -237,6 +252,32 @@ export function CodexToolRow({ toolName, block, inspect, t }: CodexToolRowProps)
             <section className={css.ioCard} aria-label={t('row.output')}>
               <span className={css.ioLabel}>{t('row.output')}</span>
               <pre className={css.ioText} data-error={state === 'error' || undefined}>{output}</pre>
+            </section>
+          ) : null}
+          {diff === null && image !== undefined && imageLoader !== undefined ? (
+            <section className={css.imageCard} aria-label={t('row.imagePreview')}>
+              <MessageImage
+                attachment={image}
+                load={imageLoader}
+                variant="single"
+                labels={{
+                  image: t('row.image'),
+                  open: t('row.imageOpen'),
+                  openNamed: (label: string) => t('row.imageOpenNamed', { label }),
+                  loading: t('row.imageLoading'),
+                  loadFailed: t('row.imageLoadFailed'),
+                  lightbox: {
+                    dialog: t('row.imagePreview'),
+                    close: t('row.imageClose'),
+                  },
+                }}
+              />
+              <dl className={css.imageMeta}>
+                <div><dt>{t('row.imageFile')}</dt><dd>{image.name ?? t('row.image')}</dd></div>
+                <div><dt>{t('row.imageType')}</dt><dd>{image.mediaType}</dd></div>
+                <div><dt>{t('row.imageDimensions')}</dt><dd>{image.width} × {image.height}</dd></div>
+                <div><dt>{t('row.imageSize')}</dt><dd>{imageSize(image.bytes)}</dd></div>
+              </dl>
             </section>
           ) : null}
           {inspect !== undefined ? (

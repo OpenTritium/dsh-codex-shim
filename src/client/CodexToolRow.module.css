@@ -162,13 +162,6 @@
   padding: 8px 10px;
 }
 
-.planOverview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
 .planItems {
   display: flex;
   flex-direction: column;
@@ -180,7 +173,7 @@
 
 .planItem {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 16px;
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -236,41 +229,6 @@
 
 @keyframes dsh-codex-plan-loading {
   to { transform: rotate(360deg); }
-}
-
-.planChange {
-  display: -webkit-box;
-  margin: 0 0 8px;
-  overflow: hidden;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.planProgressLabel {
-  flex: none;
-  font-size: 11px;
-  line-height: 16px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.planProgressTrack {
-  display: block;
-  flex: 1 1 auto;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--dsw-alias-border-l2);
-}
-
-.planProgressValue {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--dsw-alias-state-success-primary);
-  transition: width 180ms ease-out;
 }
 
 .imageMeta {
@@ -355,10 +313,6 @@
   .root[data-state='running'] .row::after {
     display: none;
     animation: none;
-  }
-
-  .planProgressValue {
-    transition: none;
   }
 
   .planLoadingIcon {

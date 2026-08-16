@@ -19,7 +19,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import css from './CodexToolRow.module.css'
-import { parsePlanPresentation, type PlanPresentation, type PlanStatus } from './plan-presentation.ts'
+import { parsePlanPresentation, type PlanStatus } from './plan-presentation.ts'
 import { splitTerminalOutput } from './terminal-output.ts'
 
 type CodexToolRowProps = ToolCallViewProps & PropsLocale<'codex'>
@@ -158,10 +158,6 @@ function stateLabel(state: CodexRowState, t: CodexToolRowProps['t']): string | n
   }
 }
 
-function planCompletedCount(plan: PlanPresentation): number {
-  return plan.items.reduce((count, item) => count + (item.status === 'completed' ? 1 : 0), 0)
-}
-
 function planStatusIcon(status: PlanStatus): ReactNode {
   switch (status) {
     case 'completed': return <span className={css.planCompletedIcon}><IconCheckOutline14 size={12} /></span>
@@ -206,7 +202,6 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
   const workdir = toolName === 'exec_command' ? stringArg(args, 'workdir') : undefined
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
   const plan = toolName === 'update_plan' ? parsePlanPresentation(argsRaw) : undefined
-  const completedPlanItems = plan === undefined ? 0 : planCompletedCount(plan)
   const showRawPanels = toolName !== 'view_image' && plan === undefined
   const expandable = diff !== null || image !== undefined || plan !== undefined || (showRawPanels && (argsRaw !== '' || output !== null))
   const open = expanded && expandable
@@ -313,32 +308,11 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
             <section className={css.planCard} aria-label={t('row.plan')}>
               <span className={css.ioLabel}>{t('row.plan')}</span>
               <div className={css.planContent}>
-                {plan.explanation === undefined ? null : (
-                  <p className={css.planChange}>{plan.explanation}</p>
-                )}
-                <div className={css.planOverview}>
-                  <span className={css.planProgressLabel}>
-                    {t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
-                  </span>
-                  <span
-                    className={css.planProgressTrack}
-                    role="progressbar"
-                    aria-label={t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
-                    aria-valuemin={0}
-                    aria-valuemax={plan.items.length}
-                    aria-valuenow={completedPlanItems}
-                  >
-                    <span
-                      className={css.planProgressValue}
-                      style={{ width: plan.items.length === 0 ? '0%' : `${(completedPlanItems / plan.items.length) * 100}%` }}
-                    />
-                  </span>
-                </div>
                 <ol className={css.planItems}>
                   {plan.items.map((item, index) => (
                     <li className={css.planItem} data-status={item.status} key={`${item.step}:${index}`}>
-                      <span className={css.planStep}>{item.step}</span>
                       <span className={css.planStatusIcon} aria-label={planStatusLabel(item.status, t)}>{planStatusIcon(item.status)}</span>
+                      <span className={css.planStep}>{item.step}</span>
                     </li>
                   ))}
                 </ol>

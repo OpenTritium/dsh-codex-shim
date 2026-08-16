@@ -14,7 +14,7 @@ import { CodexSettingsCard, cardFace } from './CodexSettingsCard.tsx'
 import { mount as mountSettingsCss, dispose as disposeSettingsCss } from './CodexSettingsCard.module.css'
 import { mount as mountToolRowCss, dispose as disposeToolRowCss } from './CodexToolRow.module.css'
 import { CODEX_SETTINGS_NS, CodexSettingsCardController } from './settings-card-controller.ts'
-import { en, NS, zh, type CodexKey } from './locales.ts'
+import { en, NS, zh, type CodexKey } from './locales/index.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {

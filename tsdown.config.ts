@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
-import { defineConfig } from 'tsdown'
+import { defineConfig, type TsdownPlugin } from 'tsdown'
 import { transform } from 'lightningcss'
 
 const PACKAGE = '@opentritium/dsh-codex-shim'
@@ -16,6 +16,26 @@ const CLIENT_EXTERNALS = [
   '@deepseek-ai/dsh-client-ui-attachment',
   '@deepseek-ai/dsh-client-web-react',
 ]
+const VIRTUAL_CODEX_SHIM_PERSONA_PREFIX = '\0codex-shim-persona:'
+const VIRTUAL_CODEX_SHIM_CSS_PREFIX = '\0codex-shim-css:'
+
+function markdownRawPlugin(): TsdownPlugin {
+  const files = new Map<string, string>()
+  return {
+    name: 'codex-shim-persona',
+    resolveId(source: string, importer: string | undefined) {
+      if (importer === undefined || !source.endsWith('.md?raw')) return null
+      const id = `${VIRTUAL_CODEX_SHIM_PERSONA_PREFIX}${source.slice(0, -4)}`
+      files.set(id, resolve(dirname(importer), source.slice(0, -4)))
+      return id
+    },
+    async load(id: string) {
+      const file = files.get(id)
+      if (file === undefined) return null
+      return `export default ${JSON.stringify(await readFile(file, 'utf8'))}`
+    },
+  }
+}
 
 export default defineConfig([
   {
@@ -33,6 +53,7 @@ export default defineConfig([
     target: 'es2024',
     dts: true,
     clean: true,
+    plugins: [markdownRawPlugin()],
     deps: { neverBundle: [/^@deepseek-ai\//] },
   },
   {
@@ -48,14 +69,14 @@ export default defineConfig([
     deps: { neverBundle: CLIENT_EXTERNALS, alwaysBundle: id => (CLIENT_EXTERNALS.includes(id) ? undefined : true) },
     plugins: [
       {
-        name: 'opentritium-css-modules',
+        name: 'codex-shim-css-modules',
         resolveId(source, importer) {
           if (!source.endsWith('.module.css') || importer === undefined) return null
-          return `\0opentritium-css-module:${Buffer.from(resolve(dirname(importer), source)).toString('base64url')}`
+          return `${VIRTUAL_CODEX_SHIM_CSS_PREFIX}${Buffer.from(resolve(dirname(importer), source)).toString('base64url')}`
         },
         async load(id) {
-          if (!id.startsWith('\0opentritium-css-module:')) return null
-          const file = Buffer.from(id.slice('\0opentritium-css-module:'.length), 'base64url').toString()
+          if (!id.startsWith(VIRTUAL_CODEX_SHIM_CSS_PREFIX)) return null
+          const file = Buffer.from(id.slice(VIRTUAL_CODEX_SHIM_CSS_PREFIX.length), 'base64url').toString()
           const { code, exports } = transform({
             filename: file,
             code: await readFile(file),

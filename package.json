@@ -11,6 +11,7 @@
     "lib/",
     "cordis.patch.yml",
     "README.md",
+    "README.zh.md",
     "LICENSE"
   ],
   "type": "module",

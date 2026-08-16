@@ -78,7 +78,7 @@ function createImageResolver(sessions: ISessions): ImageResolver {
           return `data:${result.value.attachment.mediaType};base64,${bytesToBase64(result.value.data)}`
         }
         const url = URL.createObjectURL(
-          new Blob([result.value.data.buffer], { type: result.value.attachment.mediaType }),
+          new Blob([new Uint8Array(result.value.data)], { type: result.value.attachment.mediaType }),
         )
         urls.add(url)
         return url

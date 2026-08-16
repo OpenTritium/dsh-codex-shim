@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-`@opentritium/dsh-codex-shim` 是 OpenTritium 为 DeepSeek Harness（DSH）提供的插件。本插件在选定的模型路由上提供 Codex 风格的 prompt、tool vocabulary、工具结果和 WebUI 展示，让 GPT 系列及其他适配 Codex 的模型更可靠地调用工具。
+本插件在选定的模型路由上模拟 Codex 风格的 prompt、tool vocabulary、工具结果和 WebUI 展示，帮助 GPT 系列及其他适配 Codex 的模型更可靠地调用工具。
 
 本包是 shim，不是 Codex runtime。它不启动 Codex app-server，不处理 Codex OAuth，不提供模型、凭据、命令执行器或网页搜索后端。插件只通过 DSH 的公开 Service Definition、Consumer 和 UI slot 使用现有能力；模型不匹配或移除 bundle 后，DSH 会照常使用它原本的工具和行为。
 
@@ -14,8 +14,8 @@
 
 ```sh
 gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz'
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+pnpm dsh --profile web --dump-config
 ```
 
 没有 GitHub CLI 时，可用 `curl` 与 `jq` 下载同一个最新 Release 资产：
@@ -24,28 +24,15 @@ dsh --profile web --dump-config
 curl -fsSL https://api.github.com/repos/OpenTritium/dsh-codex-shim/releases/latest \
   | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url' \
   | xargs -r curl -fLO
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
-```
-
-#### 从 Git tag 打包可安装 tarball
-
-Git 无法下载 GitHub Release 附件：Release tarball 不在 Git 历史中。没有 `gh` 时，可以克隆精确的 tag，再将其中已提交的 `lib/` 构建产物打成本地 `.tgz`：
-
-```sh
-VERSION=vX.Y.Z
-git clone --depth 1 --branch "$VERSION" https://github.com/OpenTritium/dsh-codex-shim.git
-cd dsh-codex-shim
-pnpm pack --pack-destination dist
-dsh plugin --profile web add ./dist/opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+pnpm dsh --profile web --dump-config
 ```
 
 **如果内置的 `gpt-5.6-*` 规则已经够用，无需阅读下面两个关于配置的小节。**
 
 ### 通过配置文件配置
 
-无需修改 DSH 源码。settings provider 会将 `$DSH_HOME/settings.yaml`（通常是 `~/.dsh/settings.yaml`）中 `codex-shim` 分节叠加到 bundle 默认值之上。直接创建或编辑该分节；在显式填写 `modelPatterns` 之前，默认的 `gpt-5.6-*` 自动规则仍然生效。
+通过 profile 的 settings provider 配置本插件。默认的文件 provider 使用 `$DSH_HOME/settings.yaml`（通常是 `~/.dsh/settings.yaml`）；在其中创建或编辑 `codex-shim:` 分节即可。在显式设置 `modelPatterns` 前，bundle 内置的 `gpt-5.6-*` 自动规则仍然生效。
 
 ```yaml
 codex-shim:
@@ -91,8 +78,8 @@ pnpm dsh --profile web --dump-config
 移除 bundle 不需要 DSH patch，并会恢复纯上游的 profile 组合：
 
 ```sh
-dsh plugin --profile web remove @opentritium/dsh-codex-shim
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
+pnpm dsh --profile web --dump-config
 ```
 
 若之前应用过可选的 WebUI patch，请先移除 bundle。只有确认没有其他本地外部 bundle 使用 `expose: 'client'` 时，才反向应用 patch：

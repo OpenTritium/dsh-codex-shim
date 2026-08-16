@@ -14,8 +14,8 @@ The examples below install the bundle into the WebUI `web` profile. `dsh plugin`
 
 ```sh
 gh release download --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-*.tgz'
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+pnpm dsh --profile web --dump-config
 ```
 
 Without GitHub CLI, download the same latest-release asset with `curl` and `jq`:
@@ -24,28 +24,15 @@ Without GitHub CLI, download the same latest-release asset with `curl` and `jq`:
 curl -fsSL https://api.github.com/repos/OpenTritium/dsh-codex-shim/releases/latest \
   | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url' \
   | xargs -r curl -fLO
-dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
-```
-
-#### Build an installable tarball from the Git tag
-
-Git cannot download GitHub Release assets: the Release tarball is not stored in Git. When `gh` is unavailable, clone the exact tag and locally pack its committed `lib/` output instead:
-
-```sh
-VERSION=vX.Y.Z
-git clone --depth 1 --branch "$VERSION" https://github.com/OpenTritium/dsh-codex-shim.git
-cd dsh-codex-shim
-pnpm pack --pack-destination dist
-dsh plugin --profile web add ./dist/opentritium-dsh-codex-shim-*.tgz
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web add ./opentritium-dsh-codex-shim-*.tgz
+pnpm dsh --profile web --dump-config
 ```
 
 **If the bundled `gpt-5.6-*` rule is enough, skip the next two configuration sections.**
 
 ### Configure through a configuration file
 
-No DSH source patch is required to install or configure the bundle. The settings provider layers the `codex-shim` section in `$DSH_HOME/settings.yaml` (normally `~/.dsh/settings.yaml`) above the bundle's defaults. Create or edit that section directly; the default `gpt-5.6-*` automatic rule remains in force until `modelPatterns` is explicitly set.
+Configure this plugin through the profile's settings provider. The default file-backed provider uses `$DSH_HOME/settings.yaml` (normally `~/.dsh/settings.yaml`); create or edit its `codex-shim:` section. The bundled `gpt-5.6-*` automatic rule remains in force until `modelPatterns` is explicitly set.
 
 ```yaml
 codex-shim:
@@ -91,8 +78,8 @@ The patch gives settings owners an explicit `expose: 'client'` option. It does n
 Removing the bundle needs no DSH patch and restores the plain upstream profile composition:
 
 ```sh
-dsh plugin --profile web remove @opentritium/dsh-codex-shim
-dsh --profile web --dump-config
+pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
+pnpm dsh --profile web --dump-config
 ```
 
 If the optional WebUI patch was applied, remove the bundle first. Only reverse the patch when no other local external bundle uses `expose: 'client'`:

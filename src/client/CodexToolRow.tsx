@@ -155,7 +155,7 @@ function summaryFor(toolName: string, argsRaw: string, t: CodexToolRowProps['t']
         const value = (query as Record<string, unknown>).q
         return typeof value === 'string' && value.trim() !== '' ? [firstLine(value.trim())] : []
       })
-      return labels.length === 0 ? t('row.webSearch') : `${labels[0]}${labels.length > 1 ? ` +${labels.length - 1}` : ''}`
+      return labels.length === 0 ? t('row.webSearch') : labels.join(' · ')
     }
     default: return firstLine(argsRaw)
   }

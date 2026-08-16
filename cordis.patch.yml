@@ -9,9 +9,6 @@
     - id: opentritium-codex-plan
       name: '@opentritium/dsh-codex-shim/tool-plan'
 
-    - id: opentritium-codex-openai-web
-      name: '@opentritium/dsh-codex-shim/openai-web-provider'
-
     - id: opentritium-codex-web
       name: '@opentritium/dsh-codex-shim/tool-web'
 

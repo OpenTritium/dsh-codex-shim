@@ -5,9 +5,9 @@ export const NS = 'codex'
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
-  'settings.title': 'Code 模拟',
+  'settings.title': 'Codex 模拟',
   'settings.description': '为选定的模型模拟 Codex 工具与提示词界面。',
-  'settings.enabled': '启用 Code 模拟',
+  'settings.enabled': '全局开关',
   'settings.enabledHint': '关闭后所有路由继续使用宿主的工具与提示词界面。',
   'settings.patterns': '自动启用规则',
   'settings.patternsHint': '匹配这些 glob 的模型默认启用；* 不能与其他规则共用。',
@@ -54,9 +54,9 @@ export type CodexKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
-  'settings.title': 'Code simulation',
+  'settings.title': 'Codex simulation',
   'settings.description': 'Simulates the Codex tool and prompt surface for selected models.',
-  'settings.enabled': 'Enable Code simulation',
+  'settings.enabled': 'Global switch',
   'settings.enabledHint': 'When off, all routes keep the host tool and prompt surface.',
   'settings.patterns': 'Automatic enable rules',
   'settings.patternsHint': 'Models matching these globs are enabled by default; * cannot be combined with another rule.',

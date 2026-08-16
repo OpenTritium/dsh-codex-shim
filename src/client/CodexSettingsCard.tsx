@@ -17,7 +17,7 @@ export interface CodexSettingsCardFace {
 
 type Props = PropsRuntime<'settings.plugin.item'> & PropsLocale<'codex'> & InjectFace<CodexSettingsCardFace>
 
-/** Render the OpenTritium Code simulation settings card. */
+/** Render the OpenTritium Codex simulation settings card. */
 export function CodexSettingsCard(props: Props) {
   const [open, setOpen] = useState(false)
   const [addingModel, setAddingModel] = useState(false)

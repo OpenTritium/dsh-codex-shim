@@ -17,5 +17,7 @@ export function diffsFromMeta(meta: unknown): FileDiff[] | undefined {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return false
     const { path, oldText, newText } = entry as Record<string, unknown>
     return typeof path === 'string' && (oldText === null || typeof oldText === 'string') && typeof newText === 'string'
-  }) ? value : undefined
+  })
+    ? value
+    : undefined
 }

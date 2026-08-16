@@ -89,7 +89,9 @@ export class ExecSessionRegistry {
   /** Select the oldest completed session, otherwise the oldest live session. */
   private evictionCandidate(owned: Map<number, TrackedExecSession>): TrackedExecSession {
     const sessions = [...owned.values()].sort((left, right) => left.lastUsed - right.lastUsed)
-    return sessions.find(session => session.proc.status !== 'running') ?? sessions[0] as TrackedExecSession
+    const candidate = sessions.find((session) => session.proc.status !== 'running') ?? sessions[0]
+    if (candidate === undefined) throw new Error('cannot evict from an empty exec session registry')
+    return candidate
   }
 
   /**
@@ -99,19 +101,22 @@ export class ExecSessionRegistry {
   private ensureOwnerCleanup(agent: Agent): void {
     if (this.cleanedUp.has(agent)) return
     this.cleanedUp.add(agent)
-    agent.ctx.effect(() => async () => {
-      const owned = this.byAgent.get(agent)
-      // The cleanup attaches only after the first register created the map, so
-      // the absent-map guard only satisfies the indexer.
-      /* v8 ignore start */
-      if (owned === undefined) return
-      /* v8 ignore stop */
-      const processes = [...owned.values()].map(session => session.proc)
-      owned.clear()
-      this.byAgent.delete(agent)
-      this.nextId.delete(agent)
-      for (const process of processes) process.kill()
-      await Promise.all(processes.map(process => process.done))
-    }, 'codex-exec.ownerCleanup()')
+    agent.ctx.effect(
+      () => async () => {
+        const owned = this.byAgent.get(agent)
+        // The cleanup attaches only after the first register created the map, so
+        // the absent-map guard only satisfies the indexer.
+        /* v8 ignore start */
+        if (owned === undefined) return
+        /* v8 ignore stop */
+        const processes = [...owned.values()].map((session) => session.proc)
+        owned.clear()
+        this.byAgent.delete(agent)
+        this.nextId.delete(agent)
+        for (const process of processes) process.kill()
+        await Promise.all(processes.map((process) => process.done))
+      },
+      'codex-exec.ownerCleanup()',
+    )
   }
 }

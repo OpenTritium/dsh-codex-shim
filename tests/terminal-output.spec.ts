@@ -14,7 +14,10 @@ describe('splitTerminalOutput', () => {
   })
 
   it('handles stderr-only output immediately after the output marker', () => {
-    expect(splitTerminalOutput('Output:\n[stderr]\nwarning\n')).toEqual({ stdout: '', stderr: 'warning\n' })
+    expect(splitTerminalOutput('Output:\n[stderr]\nwarning\n')).toEqual({
+      stdout: '',
+      stderr: 'warning\n',
+    })
   })
 
   it('keeps an unwrapped program line that happens to contain Output:', () => {

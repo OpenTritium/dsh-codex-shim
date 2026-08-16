@@ -3,14 +3,18 @@ import { changedPlanItems, parsePlanPresentation } from '../src/client/plan-pres
 
 describe('parsePlanPresentation', () => {
   it('keeps a valid plan and its explanation', () => {
-    expect(parsePlanPresentation(JSON.stringify({
-      explanation: 'Finish the UI polish.',
-      plan: [
-        { step: 'Inspect the tool row', status: 'completed' },
-        { step: 'Render plan steps', status: 'in_progress' },
-        { step: 'Verify in the WebUI', status: 'pending' },
-      ],
-    }))).toEqual({
+    expect(
+      parsePlanPresentation(
+        JSON.stringify({
+          explanation: 'Finish the UI polish.',
+          plan: [
+            { step: 'Inspect the tool row', status: 'completed' },
+            { step: 'Render plan steps', status: 'in_progress' },
+            { step: 'Verify in the WebUI', status: 'pending' },
+          ],
+        }),
+      ),
+    ).toEqual({
       explanation: 'Finish the UI polish.',
       items: [
         { step: 'Inspect the tool row', status: 'completed' },
@@ -35,10 +39,12 @@ describe('changedPlanItems', () => {
   ]
 
   it('keeps new and status-changed steps', () => {
-    expect(changedPlanItems(current, [
-      { step: 'Keep', status: 'completed' },
-      { step: 'Advance', status: 'pending' },
-    ])).toEqual([
+    expect(
+      changedPlanItems(current, [
+        { step: 'Keep', status: 'completed' },
+        { step: 'Advance', status: 'pending' },
+      ]),
+    ).toEqual([
       { step: 'Advance', status: 'in_progress' },
       { step: 'New', status: 'pending' },
     ])

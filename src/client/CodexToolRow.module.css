@@ -28,8 +28,13 @@
 }
 
 @keyframes dsh-codex-row-sweep {
-  0% { left: -300px; }
-  90%, 100% { left: 100%; }
+  0% {
+    left: -300px;
+  }
+  90%,
+  100% {
+    left: 100%;
+  }
 }
 
 .leading {
@@ -222,7 +227,9 @@
 }
 
 @keyframes dsh-codex-plan-loading {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .imageMeta {

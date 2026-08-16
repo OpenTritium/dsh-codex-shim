@@ -11,24 +11,34 @@ describe('web_run', () => {
   })
 
   it('renders only configured-search sources', () => {
-    expect(formatWebRunOutput({ results: [{
-      query: 'harness',
-      sources: [{ url: 'https://example.test/docs', title: 'Docs', snippet: 'Reference' }],
-      truncated: false,
-    }] })).toContain('[Docs](https://example.test/docs)')
+    expect(
+      formatWebRunOutput({
+        results: [
+          {
+            query: 'harness',
+            sources: [{ url: 'https://example.test/docs', title: 'Docs', snippet: 'Reference' }],
+            truncated: false,
+          },
+        ],
+      }),
+    ).toContain('[Docs](https://example.test/docs)')
   })
 
   it('restores a single-query web card from presentation metadata', () => {
     const value = {
-      results: [{
-        query: 'harness',
-        content: 'summary',
-        sources: [{ url: 'https://example.test/docs', title: 'Docs' }],
-        truncated: false,
-      }],
+      results: [
+        {
+          query: 'harness',
+          content: 'summary',
+          sources: [{ url: 'https://example.test/docs', title: 'Docs' }],
+          truncated: false,
+        },
+      ],
     }
     const meta = webRunMetaFromValue(value)
-    expect(presentWebRunResult({ search_query: [{ q: 'harness' }] }, { content: [], isError: false, meta: meta as never })).toEqual({
+    expect(
+      presentWebRunResult({ search_query: [{ q: 'harness' }] }, { content: [], isError: false, meta: meta as never }),
+    ).toEqual({
       card: 'web',
       kind: 'search',
       title: 'harness',
@@ -42,17 +52,34 @@ describe('web_run', () => {
     const meta = webRunMetaFromValue({
       results: [
         { query: 'first', sources: [{ url: 'https://example.test/first' }], truncated: false },
-        { query: 'second', content: 'summary', sources: [{ url: 'https://example.test/second', title: 'Second' }], truncated: true },
+        {
+          query: 'second',
+          content: 'summary',
+          sources: [{ url: 'https://example.test/second', title: 'Second' }],
+          truncated: true,
+        },
       ],
     })
-    expect(presentWebRunResult({ search_query: [{ q: 'first' }, { q: 'second' }] }, {
-      content: [], isError: false, meta: meta as never,
-    })).toEqual({
+    expect(
+      presentWebRunResult(
+        { search_query: [{ q: 'first' }, { q: 'second' }] },
+        {
+          content: [],
+          isError: false,
+          meta: meta as never,
+        },
+      ),
+    ).toEqual({
       card: 'web',
       kind: 'searches',
       results: [
         { query: 'first', sources: [{ url: 'https://example.test/first' }], truncated: false },
-        { query: 'second', answer: 'summary', sources: [{ url: 'https://example.test/second', title: 'Second' }], truncated: true },
+        {
+          query: 'second',
+          answer: 'summary',
+          sources: [{ url: 'https://example.test/second', title: 'Second' }],
+          truncated: true,
+        },
       ],
     })
   })

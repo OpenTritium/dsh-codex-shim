@@ -1,25 +1,37 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@deepseek-ai/dsh-client-runtime/client', () => ({
-  createSnapshotStore: <T>(initial: T) => {
-    let value = initial
-    return {
-      get: () => value,
-      set: (next: T) => { value = next },
-      subscribe: () => () => {},
-    }
-  },
-}), { virtual: true })
+vi.mock(
+  '@deepseek-ai/dsh-client-runtime/client',
+  () => ({
+    createSnapshotStore: <T>(initial: T) => {
+      let value = initial
+      return {
+        get: () => value,
+        set: (next: T) => {
+          value = next
+        },
+        subscribe: () => () => {},
+      }
+    },
+  }),
+  { virtual: true },
+)
 
 const { CodexSettingsCardController } = await import('../src/client/settings-card-controller.ts')
 
 function fixture() {
-  let value: Record<string, unknown> = {}
+  let value: Record<string, unknown> = {
+    enabled: true,
+    modelPatterns: ['gpt-5.6-*'],
+    modelOverrides: [],
+  }
   let user: Record<string, unknown> | undefined
   let unsubscribed = false
   const scope = {
     getSnapshot: () => ({ status: 'ready', writable: true, value, user }),
-    subscribe: () => () => { unsubscribed = true },
+    subscribe: () => () => {
+      unsubscribed = true
+    },
     set: async (field: string, next: unknown) => {
       value = { ...value, [field]: next }
       user = { ...user, [field]: next }
@@ -51,11 +63,27 @@ function fixture() {
 }
 
 describe('CodexSettingsCardController save and discard', () => {
+  it('shows the composition default and persists an explicit pattern override', async () => {
+    const { controller, getValue } = fixture()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    controller.edit('modelPatterns', '')
+    await controller.save()
+    expect(getValue().modelPatterns).toEqual([])
+    expect(controller.getStore().get().modelPatterns.overridden).toBe(true)
+
+    controller.edit('modelPatterns', 'deepseek-v4-*')
+    await controller.save()
+    expect(getValue().modelPatterns).toEqual(['deepseek-v4-*'])
+    controller.dispose()
+  })
+
   it('discards staged model exceptions and persists explicit decisions', async () => {
     const { controller, getValue, wasUnsubscribed } = fixture()
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(controller.getStore().get().models).toEqual([])
-    expect(controller.getStore().get().modelPatterns.text).toBe('')
+    expect(controller.getStore().get().modelPatterns.text).toBe('gpt-5.6-*')
+    expect(controller.getStore().get().modelPatterns.overridden).toBe(false)
 
     controller.addModelException('provider', 'model-a')
     expect(controller.getStore().get().dirty).toBe(true)

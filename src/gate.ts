@@ -25,6 +25,7 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-tools'
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
 import { CODEX_PERSONA } from './instructions.ts'
+import { CODEX_SETTINGS_NS, type CodexModelOverride } from './settings.ts'
 
 /** Cordis plugin name. */
 export const name = 'opentritium-codex-gate'
@@ -32,17 +33,7 @@ export const name = 'opentritium-codex-gate'
 export const inject = ['systemPrompt', 'tools']
 
 /** Settings namespace of the codex simulation, layered under `settings.yaml`. */
-export const CODEX_SETTINGS_NAMESPACE = settingsNamespace('opentritium-codex')
-
-/** One exact provider/model decision that overrides the glob default. */
-export interface CodexModelOverride {
-  /** Registered provider route. */
-  provider: string
-  /** Provider-owned model id. */
-  model: string
-  /** Whether this exact route receives the Codex surface. */
-  enabled: boolean
-}
+export const CODEX_SETTINGS_NAMESPACE = settingsNamespace(CODEX_SETTINGS_NS)
 
 /** Gate configuration: composition base, user-overridable through settings. */
 export interface Config {
@@ -50,7 +41,8 @@ export interface Config {
   enabled: boolean
   /**
    * Glob-style model patterns (`*` matches any character run, matched
-   * anywhere in the model id). Any match activates the codex surface.
+   * anywhere in the model id). Any match activates the codex surface. Defaults
+   * to the GPT-5.6 family; an explicit empty list disables pattern matching.
    */
   modelPatterns: string[]
   /** Exact route decisions that take precedence over {@link modelPatterns}. */
@@ -60,12 +52,16 @@ export interface Config {
 /** Runtime schema for the gate row. */
 export const Config: z<Config> = z.object({
   enabled: z.boolean().default(true),
-  modelPatterns: z.array(z.string()).default(['gpt-*', 'codex*', 'o1*', 'o3*', 'o4*']),
-  modelOverrides: z.array(z.object({
-    provider: z.string(),
-    model: z.string(),
-    enabled: z.boolean(),
-  })).default([]),
+  modelPatterns: z.array(z.string()).default(['gpt-5.6-*']),
+  modelOverrides: z
+    .array(
+      z.object({
+        provider: z.string(),
+        model: z.string(),
+        enabled: z.boolean(),
+      }),
+    )
+    .default([]),
 })
 
 /** Tool names this family registers (hidden from advertisement while inactive). */
@@ -162,9 +158,12 @@ interface RouteActivation {
  */
 function compilePattern(pattern: string): ((model: string) => boolean) | undefined {
   if (pattern.length === 0 || pattern === '*') return undefined
-  const source = pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')
+  const source = pattern
+    .split('*')
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*')
   const regex = new RegExp(source)
-  return model => regex.test(model)
+  return (model) => regex.test(model)
 }
 
 /**
@@ -174,7 +173,7 @@ function compilePattern(pattern: string): ((model: string) => boolean) | undefin
  * @returns true when any pattern matches.
  */
 export function modelMatches(model: string, patterns: readonly string[]): boolean {
-  return patterns.some(pattern => compilePattern(pattern)?.(model) ?? true)
+  return patterns.some((pattern) => compilePattern(pattern)?.(model) ?? true)
 }
 
 /**
@@ -186,7 +185,10 @@ export function modelMatches(model: string, patterns: readonly string[]): boolea
  * @param context - the per-assembly context.
  * @returns the provider/model pair, or empty fields on agent-less diagnostics assemblies.
  */
-function resolveRoute(assembled: PromptAssembly['variables'], context: AssembleContext): {
+function resolveRoute(
+  assembled: PromptAssembly['variables'],
+  context: AssembleContext,
+): {
   provider: string | undefined
   model: string | undefined
 } {
@@ -207,7 +209,7 @@ function resolveRoute(assembled: PromptAssembly['variables'], context: AssembleC
  */
 function modelOverrideFor(config: Config, provider: string | undefined, model: string): boolean | undefined {
   if (provider === undefined) return undefined
-  return config.modelOverrides.find(override => override.provider === provider && override.model === model)?.enabled
+  return config.modelOverrides.find((override) => override.provider === provider && override.model === model)?.enabled
 }
 
 /**
@@ -219,14 +221,14 @@ function modelOverrideFor(config: Config, provider: string | undefined, model: s
  * @returns true when a Codex tool is visible within the scope.
  */
 function hasCodexTool(ctx: Context, scope: AssembleContext['scope']): boolean {
-  return [...CODEX_TOOL_NAMES].some(toolName => ctx.tools.get(toolName, scope) !== undefined)
+  return [...CODEX_TOOL_NAMES].some((toolName) => ctx.tools.get(toolName, scope) !== undefined)
 }
 
 function maskedHostToolNames(tools: PromptAssembly['tools']): ReadonlySet<string> {
-  const names = new Set(tools.map(tool => tool.name))
+  const names = new Set(tools.map((tool) => tool.name))
   const masked = new Set<string>()
   for (const replacement of CODEX_SHIM_REPLACEMENTS) {
-    if (replacement.requires.every(name => names.has(name))) {
+    if (replacement.requires.every((name) => names.has(name))) {
       for (const name of replacement.masks) masked.add(name)
     }
   }
@@ -239,9 +241,7 @@ function maskedHostToolNames(tools: PromptAssembly['tools']): ReadonlySet<string
  * @returns the Codex persona text for the visible tool set.
  */
 function personaFor(tools: PromptAssembly['tools']): string {
-  return tools.some(tool => tool.name === 'web_run')
-    ? `${CODEX_PERSONA}\n\n${CODEX_WEB_RUN_GUIDANCE}`
-    : CODEX_PERSONA
+  return tools.some((tool) => tool.name === 'web_run') ? `${CODEX_PERSONA}\n\n${CODEX_WEB_RUN_GUIDANCE}` : CODEX_PERSONA
 }
 
 /**
@@ -297,12 +297,14 @@ function resolvePermissions(ctx: Context, context: AssembleContext): CodexPermis
   const sandboxPolicy = ctx.get('sandboxPolicy')
   const approval = ctx.get('approval')
   return {
-    sandbox: agent === undefined || sandboxPolicy === undefined
-      ? undefined
-      : sandboxPolicy.resolve({ session: agent.session }),
-    approval: agent === undefined || approval === undefined
-      ? undefined
-      : approval.overrideOf(agent.session) ?? approval.config.policy,
+    sandbox:
+      agent === undefined || sandboxPolicy === undefined
+        ? undefined
+        : sandboxPolicy.resolve({ session: agent.session }),
+    approval:
+      agent === undefined || approval === undefined
+        ? undefined
+        : (approval.overrideOf(agent.session) ?? approval.config.policy),
   }
 }
 
@@ -313,9 +315,12 @@ function resolvePermissions(ctx: Context, context: AssembleContext): CodexPermis
  */
 function widerModes(mode: SandboxMode): readonly SandboxMode[] {
   switch (mode) {
-    case 'read-only': return ['workspace-write', 'danger-full-access']
-    case 'workspace-write': return ['danger-full-access']
-    case 'danger-full-access': return []
+    case 'read-only':
+      return ['workspace-write', 'danger-full-access']
+    case 'workspace-write':
+      return ['danger-full-access']
+    case 'danger-full-access':
+      return []
     /* v8 ignore next 4 -- SandboxMode is a closed typed same-process union. */
     default: {
       const unreachable: never = mode
@@ -362,16 +367,18 @@ function renderApprovalPolicy(policy: ApprovalPolicy): string {
  * @param permissions - effective file and approval policies.
  * @returns the original tool or a detached schema with session-valid fields.
  */
-function adaptToolSchema(tool: PromptAssembly['tools'][number], permissions: CodexPermissions): PromptAssembly['tools'][number] {
+function adaptToolSchema(
+  tool: PromptAssembly['tools'][number],
+  permissions: CodexPermissions,
+): PromptAssembly['tools'][number] {
   if (tool.name !== 'exec_command') return tool
   const parameters = tool.parameters
   const properties = parameters.properties as Record<string, unknown>
 
   const nextProperties = { ...properties }
   delete nextProperties.prefix_rule
-  const modes = permissions.approval === 'ask' && permissions.sandbox !== undefined
-    ? widerModes(permissions.sandbox.mode)
-    : []
+  const modes =
+    permissions.approval === 'ask' && permissions.sandbox !== undefined ? widerModes(permissions.sandbox.mode) : []
   const sandboxPermissions = properties.sandbox_permissions as Record<string, unknown> | undefined
   if (modes.length === 0 || sandboxPermissions === undefined) {
     delete nextProperties.sandbox_permissions
@@ -388,7 +395,10 @@ function adaptToolSchema(tool: PromptAssembly['tools'][number], permissions: Cod
  * @param permissions - values resolved from those same services.
  * @returns detached active-route contexts.
  */
-function adaptContexts(contexts: PromptAssembly['contexts'], permissions: CodexPermissions): PromptAssembly['contexts'] {
+function adaptContexts(
+  contexts: PromptAssembly['contexts'],
+  permissions: CodexPermissions,
+): PromptAssembly['contexts'] {
   return contexts.map((context) => {
     if (context.name === SANDBOX_POLICY_CONTEXT && permissions.sandbox !== undefined) {
       return { ...context, text: renderSandboxPolicy(permissions.sandbox) }
@@ -454,7 +464,7 @@ export function apply(ctx: Context, config: Config): void {
       // Hide the codex family while the host's own surface serves this route.
       return {
         ...assembled,
-        tools: assembled.tools.filter(tool => !CODEX_TOOL_NAMES.has(tool.name)),
+        tools: assembled.tools.filter((tool) => !CODEX_TOOL_NAMES.has(tool.name)),
       }
     }
     const permissions = resolvePermissions(ctx, context)
@@ -464,14 +474,17 @@ export function apply(ctx: Context, config: Config): void {
       sections: [{ name: CODEX_PERSONA_SECTION, text: personaFor(assembled.tools) }],
       contexts: [
         { name: CODEX_ENVIRONMENT_CONTEXT, text: renderEnvironmentContext(context) },
-        ...adaptContexts(assembled.contexts.filter(entry => entry.name !== CODEX_ENVIRONMENT_CONTEXT), permissions),
+        ...adaptContexts(
+          assembled.contexts.filter((entry) => entry.name !== CODEX_ENVIRONMENT_CONTEXT),
+          permissions,
+        ),
       ],
       tools: assembled.tools
         .filter((tool) => {
           if (CODEX_TOOL_NAMES.has(tool.name)) return CODEX_ADVERTISED_TOOL_NAMES.has(tool.name)
           return !maskedHostTools.has(tool.name)
         })
-        .map(tool => adaptToolSchema(tool, permissions)),
+        .map((tool) => adaptToolSchema(tool, permissions)),
     }
   })
 }
@@ -482,7 +495,7 @@ export function apply(ctx: Context, config: Config): void {
  * @param config - the resolved section, schema-valid by construction.
  */
 export function assertServiceableConfig(config: Config): void {
-  if (config.modelPatterns.some(pattern => pattern.trim().length === 0 && pattern.length > 0)) {
+  if (config.modelPatterns.some((pattern) => pattern.trim().length === 0 && pattern.length > 0)) {
     throw new Error('codex-gate: model patterns must not be whitespace-only')
   }
   if (config.modelPatterns.includes('') && config.modelPatterns.length > 1) {

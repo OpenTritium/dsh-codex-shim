@@ -20,13 +20,15 @@ export function splitTerminalOutput(text: string): TerminalOutputSections {
   const outputMarker = '\nOutput:\n'
   const outputStart = text.indexOf(outputMarker)
   const prefix = outputStart === -1 ? text.slice(0, 'Output:\n'.length) : text.slice(0, outputStart)
-  const hasEnvelope = text.startsWith('Output:\n')
-    || /(?:^|\n)(?:Chunk ID: |Wall time: |Process (?:exited|running)|Original token count: )/.test(prefix)
-  const body = hasEnvelope && outputStart !== -1
-    ? text.slice(outputStart + outputMarker.length)
-    : hasEnvelope && text.startsWith('Output:\n')
-      ? text.slice('Output:\n'.length)
-      : text
+  const hasEnvelope =
+    text.startsWith('Output:\n') ||
+    /(?:^|\n)(?:Chunk ID: |Wall time: |Process (?:exited|running)|Original token count: )/.test(prefix)
+  const body =
+    hasEnvelope && outputStart !== -1
+      ? text.slice(outputStart + outputMarker.length)
+      : hasEnvelope && text.startsWith('Output:\n')
+        ? text.slice('Output:\n'.length)
+        : text
   if (!hasEnvelope) return { stdout: body, stderr: '' }
   const stderrMarker = '\n[stderr]\n'
   const stderrStart = body.indexOf(stderrMarker)

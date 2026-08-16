@@ -1,10 +1,12 @@
 - insert:
     - id: opentritium-codex-gate
       name: '@opentritium/dsh-codex-shim/gate'
+      config:
+        modelPatterns:
+          - gpt-5.6-*
 
     - id: opentritium-codex-exec
       name: '@opentritium/dsh-codex-shim/tool-exec'
-      disabled: !!js process.platform === 'win32'
 
     - id: opentritium-codex-plan
       name: '@opentritium/dsh-codex-shim/tool-plan'

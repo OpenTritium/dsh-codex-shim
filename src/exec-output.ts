@@ -35,7 +35,7 @@ const APPROX_BYTES_PER_TOKEN = 4
 export const DEFAULT_MAX_OUTPUT_TOKENS = 10_000
 
 /** Upstream's 1 MiB unified-exec collection ceiling at four bytes per token. */
-export const MAX_OUTPUT_TOKENS = 1024 * 1024 / APPROX_BYTES_PER_TOKEN
+export const MAX_OUTPUT_TOKENS = (1024 * 1024) / APPROX_BYTES_PER_TOKEN
 
 /**
  * Approximate the token count of one output text the way upstream's
@@ -87,7 +87,8 @@ function suffixWithinBytes(text: string, budget: number): string {
   const suffix: string[] = []
   const characters = Array.from(text)
   for (let index = characters.length - 1; index >= 0; index -= 1) {
-    const character = characters[index] as string
+    const character = characters[index]
+    if (character === undefined) continue
     const width = Buffer.byteLength(character)
     if (bytes + width > budget) break
     suffix.push(character)
@@ -104,10 +105,7 @@ function suffixWithinBytes(text: string, budget: number): string {
  * @returns the bounded output and the pre-truncation token count when
  *   truncation happened.
  */
-export function truncateOutput(
-  output: string,
-  maxTokens: number,
-): { output: string; originalTokenCount?: number } {
+export function truncateOutput(output: string, maxTokens: number): { output: string; originalTokenCount?: number } {
   const budget = resolveMaxOutputTokens(maxTokens)
   const originalTokenCount = approxTokenCount(output)
   if (originalTokenCount <= budget) return { output }

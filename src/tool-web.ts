@@ -166,7 +166,12 @@ export function formatWebRunOutput(value: WebRunValue): string {
  * @param args - validated model arguments.
  * @returns the replay-safe call view.
  */
-export function presentWebRunCall(args: WebRunArgs): { card: 'generic'; title: string; kind: 'search'; rawInput: SearchQuery[] } {
+export function presentWebRunCall(args: WebRunArgs): {
+  card: 'generic'
+  title: string
+  kind: 'search'
+  rawInput: SearchQuery[]
+} {
   return {
     card: 'generic',
     title: 'Web search',
@@ -179,9 +184,9 @@ export function presentWebRunCall(args: WebRunArgs): { card: 'generic'; title: s
 function projectSource(source: WebSearchSource): WebRunSource {
   return {
     url: source.url,
-    ...source.title === undefined ? {} : { title: source.title },
-    ...source.snippet === undefined ? {} : { snippet: source.snippet },
-    ...source.publishedAt === undefined ? {} : { publishedAt: source.publishedAt },
+    ...(source.title === undefined ? {} : { title: source.title }),
+    ...(source.snippet === undefined ? {} : { snippet: source.snippet }),
+    ...(source.publishedAt === undefined ? {} : { publishedAt: source.publishedAt }),
   }
 }
 
@@ -189,7 +194,7 @@ function projectSource(source: WebSearchSource): WebRunSource {
 function projectSearchResult(query: string, result: WebSearchResult): WebRunSearchResult {
   return {
     query,
-    ...result.content === undefined ? {} : { content: result.content },
+    ...(result.content === undefined ? {} : { content: result.content }),
     sources: result.sources.map(projectSource),
     truncated: result.truncated,
   }
@@ -203,11 +208,11 @@ function projectSearchResult(query: string, result: WebSearchResult): WebRunSear
  */
 export function webRunMetaFromValue(value: WebRunValue): JsonValue {
   return {
-    results: value.results.map(result => ({
+    results: value.results.map((result) => ({
       query: result.query,
       sources: result.sources.map(projectSource),
       truncated: result.truncated,
-      ...result.content === undefined ? {} : { answer: result.content },
+      ...(result.content === undefined ? {} : { answer: result.content }),
     })),
   }
 }
@@ -216,22 +221,26 @@ export function webRunMetaFromValue(value: WebRunValue): JsonValue {
 function isWebRunSource(value: unknown): value is WebRunSource {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const { url, title, snippet, publishedAt } = value as Record<string, unknown>
-  return typeof url === 'string'
-    && (title === undefined || typeof title === 'string')
-    && (snippet === undefined || typeof snippet === 'string')
-    && (publishedAt === undefined || typeof publishedAt === 'string')
+  return (
+    typeof url === 'string' &&
+    (title === undefined || typeof title === 'string') &&
+    (snippet === undefined || typeof snippet === 'string') &&
+    (publishedAt === undefined || typeof publishedAt === 'string')
+  )
 }
 
 /** Narrow one independently searched group from opaque replay metadata. */
 function isWebSearchGroup(value: unknown): value is WebRunMeta['results'][number] {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const { query, sources, answer, truncated } = value as Record<string, unknown>
-  return typeof query === 'string'
-    && query.trim().length > 0
-    && Array.isArray(sources)
-    && sources.every(isWebRunSource)
-    && (answer === undefined || typeof answer === 'string')
-    && typeof truncated === 'boolean'
+  return (
+    typeof query === 'string' &&
+    query.trim().length > 0 &&
+    Array.isArray(sources) &&
+    sources.every(isWebRunSource) &&
+    (answer === undefined || typeof answer === 'string') &&
+    typeof truncated === 'boolean'
+  )
 }
 
 /**
@@ -263,10 +272,10 @@ export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebS
     return {
       card: 'web',
       kind: 'searches',
-      results: meta.results.map(search => ({
+      results: meta.results.map((search) => ({
         query: search.query,
         sources: search.sources,
-        ...search.answer === undefined ? {} : { answer: search.answer },
+        ...(search.answer === undefined ? {} : { answer: search.answer }),
         truncated: search.truncated,
       })),
     } as WebSearchesResultView as unknown as WebSearchResultView
@@ -278,7 +287,7 @@ export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebS
     kind: 'search',
     title: search.query,
     sources: search.sources,
-    ...search.answer === undefined ? {} : { answer: search.answer },
+    ...(search.answer === undefined ? {} : { answer: search.answer }),
     truncated: search.truncated,
   }
 }
@@ -294,71 +303,78 @@ export function apply(ctx: Context, config: Config): void {
   assertPositiveInteger('searchMaxResults', resolved.searchMaxResults)
   assertPositiveInteger('searchTimeoutMs', resolved.searchTimeoutMs)
 
-  ctx.tools.register(defineTool({
-    name: 'web_run',
-    description: 'Search current information on the web. Pass one or more concise search_query entries with q text. This tool supports searching only; use the returned source URLs for citations.',
-    parameters: {
-      search_query: {
-        type: 'array',
-        required: true,
-        description: 'One or more independent web searches.',
-        items: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            q: { type: 'string', required: true, description: 'Search query.' },
-          },
-        },
-      },
-    },
-    output: {
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          results: {
-            type: 'array',
-            required: true,
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                query: { type: 'string', required: true },
-                content: { type: 'string' },
-                sources: {
-                  type: 'array',
-                  required: true,
-                  items: {
-                    type: 'object',
-                    additionalProperties: false,
-                    properties: {
-                      url: { type: 'string', required: true },
-                      title: { type: 'string' },
-                      snippet: { type: 'string' },
-                      publishedAt: { type: 'string' },
-                    },
-                  },
-                },
-                truncated: { type: 'boolean', required: true },
-              },
+  ctx.tools.register(
+    defineTool({
+      name: 'web_run',
+      description:
+        'Search current information on the web. Pass one or more concise search_query entries with q text. This tool supports searching only; use the returned source URLs for citations.',
+      parameters: {
+        search_query: {
+          type: 'array',
+          required: true,
+          description: 'One or more independent web searches.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              q: { type: 'string', required: true, description: 'Search query.' },
             },
           },
         },
       },
-      render: (_args, value) => [{ type: 'text', text: formatWebRunOutput(value) }],
-      presentationMeta: (_args, value) => webRunMetaFromValue(value),
-    },
-    timeoutMs: resolved.searchTimeoutMs,
-    isConcurrencySafe: () => true,
-    async execute(args, exec) {
-      const input = parseWebRunArgs(args, resolved.maxQueries)
-      const results = await Promise.all(input.search_query.map(async ({ q }) => projectSearchResult(
-        q,
-        await ctx.web.search({ query: q, maxResults: resolved.searchMaxResults }, exec.signal),
-      )))
-      return { results }
-    },
-    presentCall: presentWebRunCall,
-    presentResult: (args, result) => presentWebRunResult(args, result),
-  }))
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            results: {
+              type: 'array',
+              required: true,
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  query: { type: 'string', required: true },
+                  content: { type: 'string' },
+                  sources: {
+                    type: 'array',
+                    required: true,
+                    items: {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        url: { type: 'string', required: true },
+                        title: { type: 'string' },
+                        snippet: { type: 'string' },
+                        publishedAt: { type: 'string' },
+                      },
+                    },
+                  },
+                  truncated: { type: 'boolean', required: true },
+                },
+              },
+            },
+          },
+        },
+        render: (_args, value) => [{ type: 'text', text: formatWebRunOutput(value) }],
+        presentationMeta: (_args, value) => webRunMetaFromValue(value),
+      },
+      timeoutMs: resolved.searchTimeoutMs,
+      isConcurrencySafe: () => true,
+      async execute(args, exec) {
+        const input = parseWebRunArgs(args, resolved.maxQueries)
+        const results = await Promise.all(
+          input.search_query.map(async ({ q }) =>
+            projectSearchResult(
+              q,
+              await ctx.web.search({ query: q, maxResults: resolved.searchMaxResults }, exec.signal),
+            ),
+          ),
+        )
+        return { results }
+      },
+      presentCall: presentWebRunCall,
+      presentResult: (args, result) => presentWebRunResult(args, result),
+    }),
+  )
 }

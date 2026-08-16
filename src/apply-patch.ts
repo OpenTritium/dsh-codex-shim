@@ -55,7 +55,7 @@ export const ApplyPatchFileUpdateMode = {
 } as const
 
 /** One file-update mode supported by the upstream apply-patch engine. */
-export type ApplyPatchFileUpdateMode = typeof ApplyPatchFileUpdateMode[keyof typeof ApplyPatchFileUpdateMode]
+export type ApplyPatchFileUpdateMode = (typeof ApplyPatchFileUpdateMode)[keyof typeof ApplyPatchFileUpdateMode]
 
 /** One replacement block inside an update hunk. */
 export interface PatchUpdateChunk {
@@ -127,8 +127,8 @@ export type ApplyPatchInvocation =
   | { readonly kind: 'none' }
 
 /** Strict heredoc invocation: optional one-argument `cd <dir> &&`, then the command. */
-const INVOCATION_START
-  = /^(?:cd[ \t]+(?:'([^']*)'|"([^"]*)"|([^\s&]+))[ \t]*&&[ \t]*)?(?:apply_patch|apply-patch|applypatch)[ \t]*(<<-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\5[ \t]*$/
+const INVOCATION_START =
+  /^(?:cd[ \t]+(?:'([^']*)'|"([^"]*)"|([^\s&]+))[ \t]*&&[ \t]*)?(?:apply_patch|apply-patch|applypatch)[ \t]*(<<-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\5[ \t]*$/
 
 /**
  * Detect an apply-patch heredoc invocation in a shell script. A script
@@ -173,7 +173,7 @@ export function parseInvocation(script: string): ApplyPatchInvocation {
   return {
     kind: 'invocation',
     patch,
-    ...workdir !== undefined ? { workdir } : {},
+    ...(workdir !== undefined ? { workdir } : {}),
   }
 }
 
@@ -209,7 +209,10 @@ type MutableOp =
  * @throws ApplyPatchError with upstream wording on malformed patches.
  */
 export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
-  const lines = text.trim().split('\n').map(line => line.replace(/\r$/, ''))
+  const lines = text
+    .trim()
+    .split('\n')
+    .map((line) => line.replace(/\r$/, ''))
   const first = lines[0]?.trim()
   const last = lines.at(-1)?.trim()
   if (first !== BEGIN_PATCH_MARKER) {
@@ -222,7 +225,11 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   type Mode =
     | { kind: 'add'; op: Extract<MutableOp, { kind: 'add' }> }
     | { kind: 'delete'; op: Extract<MutableOp, { kind: 'delete' }> }
-    | { kind: 'update'; op: Extract<MutableOp, { kind: 'update' }>; chunk: MutableChunk | undefined }
+    | {
+        kind: 'update'
+        op: Extract<MutableOp, { kind: 'update' }>
+        chunk: MutableChunk | undefined
+      }
     | { kind: 'idle' }
   let mode: Mode = { kind: 'idle' }
   let environmentId: string | undefined
@@ -238,7 +245,9 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   const ensureUpdateNotEmpty = (line: string): void => {
     if (mode.kind !== 'update') return
     if (mode.op.chunks.length === 0) {
-      throw new ApplyPatchError(`invalid hunk at line ${lineNumber}, Update file hunk for path '${mode.op.path}' is empty`)
+      throw new ApplyPatchError(
+        `invalid hunk at line ${lineNumber}, Update file hunk for path '${mode.op.path}' is empty`,
+      )
     }
     const tail = mode.op.chunks.at(-1)
     if (tail !== undefined && tail.oldLines.length === 0 && tail.newLines.length === 0) {
@@ -270,14 +279,21 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
     }
     if (trimmed.startsWith(ADD_FILE_MARKER)) {
       ensureUpdateNotEmpty(trimmed)
-      const op: Extract<MutableOp, { kind: 'add' }> = { kind: 'add', path: trimmed.slice(ADD_FILE_MARKER.length), lines: [] }
+      const op: Extract<MutableOp, { kind: 'add' }> = {
+        kind: 'add',
+        path: trimmed.slice(ADD_FILE_MARKER.length),
+        lines: [],
+      }
       ops.push(op)
       mode = { kind: 'add', op }
       continue
     }
     if (trimmed.startsWith(DELETE_FILE_MARKER)) {
       ensureUpdateNotEmpty(trimmed)
-      const op: Extract<MutableOp, { kind: 'delete' }> = { kind: 'delete', path: trimmed.slice(DELETE_FILE_MARKER.length) }
+      const op: Extract<MutableOp, { kind: 'delete' }> = {
+        kind: 'delete',
+        path: trimmed.slice(DELETE_FILE_MARKER.length),
+      }
       ops.push(op)
       mode = { kind: 'delete', op }
       continue
@@ -296,7 +312,9 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
     }
     if (mode.kind === 'add') {
       if (!line.startsWith('+')) {
-        throw new ApplyPatchError(`invalid hunk at line ${lineNumber}, Invalid file line in Add File hunk: '${line}'. Lines in Add File hunks must start with '+'`)
+        throw new ApplyPatchError(
+          `invalid hunk at line ${lineNumber}, Invalid file line in Add File hunk: '${line}'. Lines in Add File hunks must start with '+'`,
+        )
       }
       mode.op.lines.push(line.slice(1))
       continue
@@ -311,9 +329,8 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
       }
       if (trimmed === EMPTY_CHANGE_CONTEXT_MARKER || trimmed.startsWith(CHANGE_CONTEXT_MARKER)) {
         const chunk: MutableChunk = {
-          changeContext: trimmed === EMPTY_CHANGE_CONTEXT_MARKER
-            ? undefined
-            : trimmed.slice(CHANGE_CONTEXT_MARKER.length),
+          changeContext:
+            trimmed === EMPTY_CHANGE_CONTEXT_MARKER ? undefined : trimmed.slice(CHANGE_CONTEXT_MARKER.length),
           oldLines: [],
           newLines: [],
           contextLineIndices: [],
@@ -325,7 +342,9 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
       }
       if (trimmed === EOF_MARKER) {
         if (mode.chunk === undefined) {
-          throw new ApplyPatchError(`invalid hunk at line ${lineNumber}, Unexpected '${EOF_MARKER}' with no change lines in update hunk for '${mode.op.path}'`)
+          throw new ApplyPatchError(
+            `invalid hunk at line ${lineNumber}, Unexpected '${EOF_MARKER}' with no change lines in update hunk for '${mode.op.path}'`,
+          )
         }
         mode.chunk.endOfFile = true
         continue
@@ -349,7 +368,9 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
         mode = { kind: 'update', op: mode.op, chunk }
         continue
       }
-      throw new ApplyPatchError(`invalid hunk at line ${lineNumber}, Unexpected line found in update hunk: '${line}'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)`)
+      throw new ApplyPatchError(
+        `invalid hunk at line ${lineNumber}, Unexpected line found in update hunk: '${line}'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)`,
+      )
     }
     throw new ApplyPatchError(`invalid patch: Unexpected line outside any hunk: '${line}'`)
   }
@@ -362,7 +383,7 @@ export function parsePatch(text: string): Omit<ParsedPatch, 'workdir'> {
   }
   return {
     ops,
-    ...environmentId !== undefined ? { environmentId } : {},
+    ...(environmentId !== undefined ? { environmentId } : {}),
   }
 }
 
@@ -377,7 +398,10 @@ export function parseInvocationPatch(script: string): ParsedPatch {
   if (invocation.kind !== 'invocation') {
     throw new ApplyPatchError('apply_patch invocation expected')
   }
-  return { ...parsePatch(invocation.patch), ...invocation.workdir !== undefined ? { workdir: invocation.workdir } : {} }
+  return {
+    ...parsePatch(invocation.patch),
+    ...(invocation.workdir !== undefined ? { workdir: invocation.workdir } : {}),
+  }
 }
 
 /**
@@ -390,7 +414,9 @@ function normalizeForPass(text: string, pass: number): string {
   if (pass === 0) return text
   if (pass === 1) return text.trimEnd()
   if (pass === 2) return text.trim()
-  return text.trim().replace(/[\u2010-\u2015\u2212]/g, '-')
+  return text
+    .trim()
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
     .replace(/[\u2018-\u201B]/g, "'")
     .replace(/[\u201C-\u201F]/g, '"')
     .replace(/[\u00A0\u2002-\u200A\u202F\u205F\u3000]/g, ' ')
@@ -496,7 +522,7 @@ class SourceFile {
   }
 
   lineTexts(): string[] {
-    return this.lines.map(line => line.text)
+    return this.lines.map((line) => line.text)
   }
 
   applyReplacements(replacements: readonly Replacement[]): void {
@@ -504,18 +530,18 @@ class SourceFile {
     let sourceIndex = 0
     for (const replacement of replacements) {
       next.push(...this.lines.slice(sourceIndex, replacement.start))
-      next.push(...replacement.newLines.map(text => ({ text, ending: this.preferredEnding })))
+      next.push(...replacement.newLines.map((text) => ({ text, ending: this.preferredEnding })))
       sourceIndex = replacement.start + replacement.oldLength
     }
     next.push(...this.lines.slice(sourceIndex))
-    this.lines = next.map(line => ({
+    this.lines = next.map((line) => ({
       ...line,
       ending: line.ending ?? this.preferredEnding,
     }))
   }
 
   intoContents(): string {
-    return this.lines.map(line => `${line.text}${line.ending!}`).join('')
+    return this.lines.map((line) => `${line.text}${line.ending!}`).join('')
   }
 }
 
@@ -536,9 +562,12 @@ function computeReplacements(
       lineIndex = index + 1
     }
     if (chunk.oldLines.length === 0) {
-      const insertionIndex = updateFileMode === ApplyPatchFileUpdateMode.NormalizeToLf
-        ? originalLines.at(-1) === '' ? originalLines.length - 1 : originalLines.length
-        : originalLines.length
+      const insertionIndex =
+        updateFileMode === ApplyPatchFileUpdateMode.NormalizeToLf
+          ? originalLines.at(-1) === ''
+            ? originalLines.length - 1
+            : originalLines.length
+          : originalLines.length
       replacements.push({ start: insertionIndex, oldLength: 0, newLines: chunk.newLines })
       continue
     }
@@ -612,18 +641,13 @@ export function deriveUpdatedContent(
   if (updateFileMode === ApplyPatchFileUpdateMode.NormalizeToLf) {
     const originalLines = original.split('\n')
     if (originalLines.at(-1) === '') originalLines.pop()
-    const updated = applyReplacements(
-      originalLines,
-      computeReplacements(originalLines, path, chunks, updateFileMode),
-    )
+    const updated = applyReplacements(originalLines, computeReplacements(originalLines, path, chunks, updateFileMode))
     if (updated.at(-1) !== '') updated.push('')
     return updated.join('\n')
   }
 
   const sourceFile = SourceFile.parse(original)
-  sourceFile.applyReplacements(
-    computeReplacements(sourceFile.lineTexts(), path, chunks, updateFileMode),
-  )
+  sourceFile.applyReplacements(computeReplacements(sourceFile.lineTexts(), path, chunks, updateFileMode))
   return sourceFile.intoContents()
 }
 
@@ -697,7 +721,12 @@ export async function applyPatch(
   type VerifiedOperation =
     | { readonly kind: 'add'; readonly path: string; readonly content: string }
     | { readonly kind: 'delete'; readonly path: string }
-    | { readonly kind: 'update'; readonly path: string; readonly moveTo: string | undefined; readonly content: string }
+    | {
+        readonly kind: 'update'
+        readonly path: string
+        readonly moveTo: string | undefined
+        readonly content: string
+      }
 
   const operations: VerifiedOperation[] = []
   const added: string[] = []
@@ -705,7 +734,11 @@ export async function applyPatch(
   const deleted: string[] = []
   for (const op of patch.ops) {
     if (op.kind === 'add') {
-      operations.push({ kind: 'add', path: op.path, content: op.lines.map(line => `${line}\n`).join('') })
+      operations.push({
+        kind: 'add',
+        path: op.path,
+        content: op.lines.map((line) => `${line}\n`).join(''),
+      })
       added.push(op.path)
       continue
     }

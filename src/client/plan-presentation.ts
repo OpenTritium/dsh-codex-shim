@@ -26,14 +26,14 @@ export function changedPlanItems(
   previous: readonly PlanItemPresentation[] | undefined,
 ): PlanItemPresentation[] {
   if (previous === undefined) return [...current]
-  const previousStatuses = new Map(previous.map(item => [item.step, item.status]))
-  const changed = current.filter(item => previousStatuses.get(item.step) !== item.status)
+  const previousStatuses = new Map(previous.map((item) => [item.step, item.status]))
+  const changed = current.filter((item) => previousStatuses.get(item.step) !== item.status)
   return changed.length === 0 ? [...current] : changed
 }
 
 function objectValue(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : undefined
 }
 
@@ -62,7 +62,7 @@ export function parsePlanPresentation(argsRaw: string): PlanPresentation | undef
       items.push({ step, status })
     }
     const explanation = typeof args.explanation === 'string' ? args.explanation.trim() : ''
-    return { items, ...explanation === '' ? {} : { explanation } }
+    return { items, ...(explanation === '' ? {} : { explanation }) }
   } catch {
     return undefined
   }

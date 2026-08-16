@@ -55,7 +55,12 @@ function toTodoList(raw: UpdatePlanArgs['plan']): TodoItem[] {
  * @param args - the validated tool arguments.
  * @returns the generic call view.
  */
-export function presentPlanCall(args: UpdatePlanArgs): { card: 'generic'; title: string; kind: 'other'; rawInput: UpdatePlanArgs['plan'] } {
+export function presentPlanCall(args: UpdatePlanArgs): {
+  card: 'generic'
+  title: string
+  kind: 'other'
+  rawInput: UpdatePlanArgs['plan']
+} {
   return {
     card: 'generic',
     title: 'Update plan',
@@ -69,44 +74,47 @@ export function presentPlanCall(args: UpdatePlanArgs): { card: 'generic'; title:
  * @param ctx - registrant context carrying the tool registry.
  */
 export function apply(ctx: Context): void {
-  ctx.tools.register(defineTool({
-    name: 'update_plan',
-    description: 'Updates the task plan. Provide an optional explanation and a list of plan items, each with a step and status. At most one step can be in_progress at a time.',
-    parameters: {
-      explanation: { type: 'string', description: 'Optional explanation for this plan update.' },
-      plan: {
-        type: 'array',
-        required: true,
-        description: 'The current plan steps with their statuses.',
-        items: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            step: { type: 'string', required: true, description: 'Task step text.' },
-            status: {
-              type: 'string',
-              required: true,
-              enum: [...STATUSES],
-              description: 'pending (not started) | in_progress (now) | completed (done).',
+  ctx.tools.register(
+    defineTool({
+      name: 'update_plan',
+      description:
+        'Updates the task plan. Provide an optional explanation and a list of plan items, each with a step and status. At most one step can be in_progress at a time.',
+      parameters: {
+        explanation: { type: 'string', description: 'Optional explanation for this plan update.' },
+        plan: {
+          type: 'array',
+          required: true,
+          description: 'The current plan steps with their statuses.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              step: { type: 'string', required: true, description: 'Task step text.' },
+              status: {
+                type: 'string',
+                required: true,
+                enum: [...STATUSES],
+                description: 'pending (not started) | in_progress (now) | completed (done).',
+              },
             },
           },
         },
       },
-    },
-    output: {
-      schema: { type: 'string' },
-      render: () => [{ type: 'text', text: 'Plan updated' }],
-    },
-    execute(args, exec) {
-      const todos = toTodoList(args.plan)
-      if (exec.agent === undefined) {
-        // The checklist is per-agent-session state; a non-agent caller has
-        // nowhere to write it. Reject rather than silently no-op.
-        throw new Error('update_plan requires an owning agent session')
-      }
-      exec.agent.session.append('todo/write', { todos })
-      return Promise.resolve('Plan updated')
-    },
-    presentCall: presentPlanCall,
-  }))
+      output: {
+        schema: { type: 'string' },
+        render: () => [{ type: 'text', text: 'Plan updated' }],
+      },
+      execute(args, exec) {
+        const todos = toTodoList(args.plan)
+        if (exec.agent === undefined) {
+          // The checklist is per-agent-session state; a non-agent caller has
+          // nowhere to write it. Reject rather than silently no-op.
+          throw new Error('update_plan requires an owning agent session')
+        }
+        exec.agent.session.append('todo/write', { todos })
+        return Promise.resolve('Plan updated')
+      },
+      presentCall: presentPlanCall,
+    }),
+  )
 }

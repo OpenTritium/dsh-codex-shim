@@ -74,14 +74,17 @@ export type CodexKey = keyof typeof zh
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
   'settings.title': 'Codex environment simulation',
-  'settings.description': 'Simulates the familiar Codex Tool surface for selected models, so GPT-family models feel at home.',
+  'settings.description':
+    'Simulates the familiar Codex Tool surface for selected models, so GPT-family models feel at home.',
   'settings.enabled': 'Global switch',
   'settings.enabledHint': 'When off, all routes keep the host tool and prompt surface.',
   'settings.patterns': 'Automatic enable rules',
   'settings.patternsPlaceholder': 'For example: gpt-5.6-*\ndeepseek-v4-*',
-  'settings.patternsHint': 'Models matching these globs are enabled by default; * cannot be combined with another rule.',
+  'settings.patternsHint':
+    'Models matching these globs are enabled by default; * cannot be combined with another rule.',
   'settings.models': 'Explicit overrides',
-  'settings.modelsHint': 'Models not listed here follow the automatic enable rules; add a model to explicitly enable or disable it.',
+  'settings.modelsHint':
+    'Models not listed here follow the automatic enable rules; add a model to explicitly enable or disable it.',
   'settings.modelsLoading': 'Loading models…',
   'settings.modelsFailed': 'Model directory unavailable',
   'settings.modelsAdd': 'Add model',

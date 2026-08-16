@@ -27,7 +27,7 @@ export function presentExecCall(args: ExecCallArgs): TerminalCallView {
   return {
     card: 'terminal',
     title: args.cmd,
-    ...args.workdir !== undefined ? { cwd: args.workdir } : {},
+    ...(args.workdir !== undefined ? { cwd: args.workdir } : {}),
   }
 }
 
@@ -52,7 +52,5 @@ export function presentWriteStdinCall(args: WriteStdinCallArgs): TerminalCallVie
  */
 export function presentExecResult(_args: unknown, result: ToolResult): TerminalResultView | undefined {
   const block = result.content[0]
-  return block !== undefined && block.type === 'text'
-    ? { card: 'terminal', output: block.text }
-    : undefined
+  return block !== undefined && block.type === 'text' ? { card: 'terminal', output: block.text } : undefined
 }

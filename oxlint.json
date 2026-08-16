@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "env": {
+    "builtin": true
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "warn",
+    "typeAware": true
+  },
+  "ignorePatterns": ["lib/**", "node_modules/**"],
+  "overrides": [
+    {
+      "files": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+      "plugins": ["typescript"],
+      "rules": {
+        "no-var": "error",
+        "prefer-const": "error",
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ],
+        "typescript/await-thenable": "error",
+        "typescript/no-floating-promises": "error",
+        "typescript/no-misused-promises": "error",
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/no-unnecessary-type-assertion": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/only-throw-error": "error",
+        "typescript/return-await": ["error", "error-handling-correctness-only"],
+        "typescript/switch-exhaustiveness-check": "error"
+      }
+    },
+    {
+      "files": ["tests/**/*.{ts,tsx}"],
+      "plugins": ["typescript"],
+      "rules": {
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/only-throw-error": "off"
+      }
+    }
+  ]
+}

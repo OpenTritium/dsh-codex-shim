@@ -1,13 +1,7 @@
 import z from "@deepseek-ai/schemastery";
 import { Context } from "@deepseek-ai/cordis";
-//#region src/gate.d.ts
-/** Cordis plugin name. */
-declare const name = "opentritium-codex-gate";
-/** The prompt registry whose assemblies this gate rewrites. */
-declare const inject: string[];
-/** Settings namespace of the codex simulation, layered under `settings.yaml`. */
-declare const CODEX_SETTINGS_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
-/** One exact provider/model decision that overrides the glob default. */
+//#region src/settings.d.ts
+/** One exact provider/model decision that overrides the model-pattern default. */
 interface CodexModelOverride {
   /** Registered provider route. */
   provider: string;
@@ -16,13 +10,22 @@ interface CodexModelOverride {
   /** Whether this exact route receives the Codex surface. */
   enabled: boolean;
 }
+//#endregion
+//#region src/gate.d.ts
+/** Cordis plugin name. */
+declare const name = "opentritium-codex-gate";
+/** The prompt registry whose assemblies this gate rewrites. */
+declare const inject: string[];
+/** Settings namespace of the codex simulation, layered under `settings.yaml`. */
+declare const CODEX_SETTINGS_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
 /** Gate configuration: composition base, user-overridable through settings. */
 interface Config {
   /** Global switch; false disables the simulation for every route. */
   enabled: boolean;
   /**
    * Glob-style model patterns (`*` matches any character run, matched
-   * anywhere in the model id). Any match activates the codex surface.
+   * anywhere in the model id). Any match activates the codex surface. Defaults
+   * to the GPT-5.6 family; an explicit empty list disables pattern matching.
    */
   modelPatterns: string[];
   /** Exact route decisions that take precedence over {@link modelPatterns}. */
@@ -51,4 +54,4 @@ declare function apply(ctx: Context, config: Config): void;
  */
 declare function assertServiceableConfig(config: Config): void;
 //#endregion
-export { CODEX_SETTINGS_NAMESPACE, CodexModelOverride, Config, apply, assertServiceableConfig, inject, modelMatches, name };
+export { CODEX_SETTINGS_NAMESPACE, Config, apply, assertServiceableConfig, inject, modelMatches, name };

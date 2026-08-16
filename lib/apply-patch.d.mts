@@ -27,7 +27,7 @@ declare const ApplyPatchFileUpdateMode: {
   readonly PreserveLineEndings: "preserve-line-endings";
 };
 /** One file-update mode supported by the upstream apply-patch engine. */
-type ApplyPatchFileUpdateMode = typeof ApplyPatchFileUpdateMode[keyof typeof ApplyPatchFileUpdateMode];
+type ApplyPatchFileUpdateMode = (typeof ApplyPatchFileUpdateMode)[keyof typeof ApplyPatchFileUpdateMode];
 /** One replacement block inside an update hunk. */
 interface PatchUpdateChunk {
   /** Single locator line from `@@ text`, absent for a bare `@@` or no header. */

@@ -54,6 +54,7 @@ describe('CodexSettingsCardController save and discard', () => {
     const { controller, getValue } = fixture()
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(controller.getStore().get().models).toEqual([])
+    expect(controller.getStore().get().modelPatterns.text).toBe('')
 
     controller.addModelException('provider', 'model-a')
     expect(controller.getStore().get().dirty).toBe(true)

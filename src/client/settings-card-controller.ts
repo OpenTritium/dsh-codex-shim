@@ -119,10 +119,13 @@ export class CodexSettingsCardController {
 
   private field(field: 'enabled' | 'modelPatterns'): FieldState {
     const current = this.current()
+    const snapshot = this.scope.getSnapshot()
+    const user = snapshot.user as CodexSettings | undefined
+    const userHasField = user !== undefined && field in user
     const draft = this.drafts.get(field)
     const text = draft ?? (field === 'enabled'
       ? current.enabled === undefined ? '' : String(current.enabled)
-      : formatPatterns(current.modelPatterns))
+      : userHasField ? formatPatterns(user.modelPatterns) : '')
     return {
       text,
       overridden: this.cleared.has(field) ? false : draft !== undefined || this.scope.getSnapshot().user !== undefined && field in (this.scope.getSnapshot().user as object),

@@ -71,6 +71,7 @@ export const Config: z<Config> = z.object({
 /** Tool names this family registers (hidden from advertisement while inactive). */
 const CODEX_TOOL_NAMES: ReadonlySet<string> = new Set([
   'exec_command',
+  'write_stdin',
   'apply_patch',
   'apply-patch',
   'applypatch',

@@ -51,6 +51,7 @@ export function apply(ctx: ClientContext): void {
 function installSettings(ctx: ClientContext): void {
   const connection = ctx.get('connection') as ConnectionHandle
   const settings = new CodexSettingsCardController(ctx.settingsScope.bind({ namespace: CODEX_SETTINGS_NS }), connection.api)
+  ctx.effect(() => () => settings.dispose(), 'ui-codex: settings controller')
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     id: 'opentritium-codex',

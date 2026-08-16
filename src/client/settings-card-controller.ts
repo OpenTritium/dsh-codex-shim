@@ -95,6 +95,8 @@ export class CodexSettingsCardController {
   private readonly drafts = new Map<'enabled' | 'modelPatterns', string>()
   private readonly cleared = new Set<'enabled' | 'modelPatterns' | 'modelOverrides'>()
   private readonly store: SnapshotStore<CodexSettingsState>
+  private readonly unsubscribe: () => void
+  private disposed = false
   private saving = false
   private failed = false
   private modelsStatus: CodexSettingsState['modelsStatus'] = 'loading'
@@ -107,11 +109,13 @@ export class CodexSettingsCardController {
     private readonly api: Pick<IApiClient, 'llm'>,
   ) {
     this.store = createSnapshotStore(this.snapshot())
-    scope.subscribe(() => this.publish())
+    this.unsubscribe = scope.subscribe(() => this.publish())
     void this.loadModels()
   }
 
-  private publish(): void { this.store.set(this.snapshot()) }
+  private publish(): void {
+    if (!this.disposed) this.store.set(this.snapshot())
+  }
 
   private current(): CodexSettings {
     return this.scope.getSnapshot().value ?? {}
@@ -187,6 +191,13 @@ export class CodexSettingsCardController {
   }
 
   getStore(): SnapshotStore<CodexSettingsState> { return this.store }
+
+  /** Dispose the settings subscription when the client plugin is unloaded. */
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.unsubscribe()
+  }
 
   edit(field: 'enabled' | 'modelPatterns', text: string): void {
     this.drafts.set(field, text)

@@ -16,9 +16,10 @@ const { CodexSettingsCardController } = await import('../src/client/settings-car
 function fixture() {
   let value: Record<string, unknown> = {}
   let user: Record<string, unknown> | undefined
+  let unsubscribed = false
   const scope = {
     getSnapshot: () => ({ status: 'ready', writable: true, value, user }),
-    subscribe: () => () => {},
+    subscribe: () => () => { unsubscribed = true },
     set: async (field: string, next: unknown) => {
       value = { ...value, [field]: next }
       user = { ...user, [field]: next }
@@ -46,12 +47,12 @@ function fixture() {
     },
   }
   const controller = new CodexSettingsCardController(scope as never, api as never)
-  return { controller, getValue: () => value }
+  return { controller, getValue: () => value, wasUnsubscribed: () => unsubscribed }
 }
 
 describe('CodexSettingsCardController save and discard', () => {
   it('discards staged model exceptions and persists explicit decisions', async () => {
-    const { controller, getValue } = fixture()
+    const { controller, getValue, wasUnsubscribed } = fixture()
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(controller.getStore().get().models).toEqual([])
     expect(controller.getStore().get().modelPatterns.text).toBe('')
@@ -75,5 +76,8 @@ describe('CodexSettingsCardController save and discard', () => {
     await controller.save()
     expect(getValue().modelOverrides).toEqual([])
     expect(controller.getStore().get().models).toEqual([])
+    controller.dispose()
+    controller.dispose()
+    expect(wasUnsubscribed()).toBe(true)
   })
 })

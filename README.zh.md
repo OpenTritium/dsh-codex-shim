@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-`@opentritium/dsh-codex-shim` 是 OpenTritium 为 DeepSeek Harness（DSH）提供的插件。它在选定的模型路由上提供 Codex 风格的 prompt、tool vocabulary、工具结果和 WebUI 展示，让 GPT 系列及其他适配 Codex 的模型更可靠地调用工具。
+`@opentritium/dsh-codex-shim` 是 OpenTritium 为 DeepSeek Harness（DSH）提供的插件。本插件在选定的模型路由上提供 Codex 风格的 prompt、tool vocabulary、工具结果和 WebUI 展示，让 GPT 系列及其他适配 Codex 的模型更可靠地调用工具。
 
 本包是 shim，不是 Codex runtime。它不启动 Codex app-server，不处理 Codex OAuth，不提供模型、凭据、命令执行器或网页搜索后端。插件只通过 DSH 的公开 Service Definition、Consumer 和 UI slot 使用现有能力；模型不匹配或移除 bundle 后，DSH 会照常使用它原本的工具和行为。
 

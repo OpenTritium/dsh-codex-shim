@@ -574,11 +574,9 @@ export async function applyPatch(
       continue
     }
     if (op.kind === 'delete') {
-      try {
-        await io.readText(op.path, effectiveCwd)
-      } catch (error: unknown) {
-        throw new ApplyPatchError(`Failed to read ${resolvePath(effectiveCwd, op.path)}: ${String(error)}`)
-      }
+      // Codex treats a textual preimage as optional for deletion: it supports
+      // reporting a text delta but must not prevent removing a binary file.
+      await io.readText(op.path, effectiveCwd).catch(() => undefined)
       operations.push({ kind: 'delete', path: op.path })
       deleted.push(op.path)
       continue

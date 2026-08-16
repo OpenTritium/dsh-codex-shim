@@ -112,7 +112,7 @@ bundle 会全局挂载 gate，但只有同时满足以下条件时才应用 Code
 | -------------- | -------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `exec_command` | 可用     | `ctx.shell`、sandbox policy、approval | 执行命令、限制输出，并保留 session 供后续轮询。                                                                               |
 | `write_stdin`  | 降级可用 | `ShellProcess` 读取                   | 可以轮询已有 session。当前 DSH shell 定义没有 stdin 写入操作，非空 stdin 会明确拒绝。                                         |
-| `apply_patch`  | 可用     | `ctx.fs`、`ctx.shell`                 | 支持 Codex patch marker、添加/删除/更新/移动文件和模糊匹配。`apply-patch`、`applypatch` 仅作为兼容别名，不在 surface 中展示。 |
+| `apply_patch`  | 可用     | `ctx.fs`、`ctx.shell`                 | 支持 Codex patch marker、添加/删除/更新/移动文件和模糊匹配。删除二进制文件时不显示文本 diff。`apply-patch`、`applypatch` 仅作为兼容别名，不在 surface 中展示。 |
 | `view_image`   | 条件可用 | `ctx.fs`、attachment service          | profile 提供 filesystem 和图片 attachment capability 时读取 PNG、JPEG、WebP、GIF。                                            |
 | `update_plan`  | 可用     | 持久化 `todo/write` session event     | 保存 `pending`、`in_progress`、`completed` 步骤，最多一个进行中步骤。                                                         |
 | `web_run`      | 仅搜索   | `ctx.web.search()`                    | 接收多个 `search_query` 并返回 provider 来源；不实现 `open`、`click`、`find`、截图或任意 fetch。                              |

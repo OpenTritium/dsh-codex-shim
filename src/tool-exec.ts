@@ -282,9 +282,8 @@ function recordingPatchIo(io: ApplyPatchIo): { io: ApplyPatchIo; changes: () => 
       async remove(path, workdir) {
         const key = keyOf(path, workdir)
         const existing = preimages.get(key)
-        const change = existing ?? recordBefore(path, workdir, await optionalPreimage(path, workdir))
         await io.remove(path, workdir)
-        applied.set(key, { path, ...(change.before === undefined ? {} : { before: change.before }), after: '' })
+        if (existing !== undefined) applied.set(key, { path, before: existing.before, after: '' })
       },
       async moveText(from, to, workdir, content) {
         const sourceKey = keyOf(from, workdir)

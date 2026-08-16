@@ -2,9 +2,9 @@
 
 [中文说明](README.zh.md)
 
-`@opentritium/dsh-codex-shim` is an OpenTritium plugin for DeepSeek Harness (DSH). It gives selected model routes a Codex-style prompt, tool vocabulary, tool results, and WebUI presentation so GPT-family and other Codex-adapted models can make more reliable tool calls.
+This plugin simulates Codex-style prompts, tool vocabulary, tool results, and WebUI presentation for selected model routes, helping GPT-family and other Codex-adapted models use tools more reliably.
 
-This is a shim, not a Codex runtime. It does not start a Codex app-server, handle Codex OAuth, provide models or credentials, execute commands by itself, or provide a web-search backend. It consumes DSH capabilities through their public service definitions; when a model does not match or the bundle is removed, DSH continues with its normal tools and behavior.
+This is a shim, not a Codex runtime. It does not start a Codex app-server, handle Codex OAuth, provide models or credentials, execute commands by itself, or provide a web-search backend. It consumes existing DSH capabilities only through public service definitions, consumers, and UI slots; when a model does not match or the bundle is removed, DSH continues with its normal tools and behavior.
 
 ## Install in a profile
 
@@ -112,7 +112,7 @@ The following tools are registered by the bundle and advertised only on an activ
 | -------------- | ----------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `exec_command` | Available   | `ctx.shell`, sandbox policy, approval | Runs commands, returns bounded output, and keeps sessions for later polling.                                                                                            |
 | `write_stdin`  | Degraded    | `ShellProcess` reads                  | Polls an existing session. Non-empty stdin is rejected because the current DSH shell definition has no stdin-write operation.                                           |
-| `apply_patch`  | Available   | `ctx.fs`, `ctx.shell`                 | Supports Codex patch markers, file add/delete/update/move, and fuzzy hunk matching. `apply-patch` and `applypatch` remain compatibility aliases but are not advertised. |
+| `apply_patch`  | Available   | `ctx.fs`, `ctx.shell`                 | Supports Codex patch markers, file add/delete/update/move, and fuzzy hunk matching. Binary file deletion succeeds without a text diff. `apply-patch` and `applypatch` remain compatibility aliases but are not advertised. |
 | `view_image`   | Conditional | `ctx.fs`, attachment service          | Reads PNG, JPEG, WebP, and GIF files when the profile provides filesystem and image-attachment capabilities.                                                            |
 | `update_plan`  | Available   | Durable `todo/write` session event    | Stores `pending`, `in_progress`, and `completed` steps with at most one active step.                                                                                    |
 | `web_run`      | Search-only | `ctx.web.search()`                    | Accepts multiple `search_query` items and returns provider sources. It does not implement `open`, `click`, `find`, screenshots, or arbitrary fetch.                     |

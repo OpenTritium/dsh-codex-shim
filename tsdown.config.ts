@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { basename, dirname, resolve } from 'node:path'
+import { basename, dirname, relative, resolve } from 'node:path'
 import { defineConfig, type TsdownPlugin } from 'tsdown'
 import { transform } from 'lightningcss'
 
@@ -78,7 +78,7 @@ export default defineConfig([
           if (!id.startsWith(VIRTUAL_CODEX_SHIM_CSS_PREFIX)) return null
           const file = Buffer.from(id.slice(VIRTUAL_CODEX_SHIM_CSS_PREFIX.length), 'base64url').toString()
           const { code, exports } = transform({
-            filename: file,
+            filename: relative(process.cwd(), file).replaceAll('\\', '/'),
             code: await readFile(file),
             cssModules: { pattern: '[hash]_[local]' },
             minify: true,

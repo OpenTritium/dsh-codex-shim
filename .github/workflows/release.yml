@@ -14,6 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: 47f943859bef60e4160492346772ded9b24f765a
+          path: upstream
+
       - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
@@ -25,15 +31,52 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm install --frozen-lockfile
+        working-directory: upstream
+
+      - run: pnpm run build
+        working-directory: upstream
+
+      - name: Link pinned DSH peers
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdirSync, readdirSync, readFileSync, symlinkSync } from 'node:fs'
+          import { dirname, join } from 'node:path'
+
+          const shim = process.cwd()
+          const upstream = join(shim, 'upstream')
+          const peers = Object.keys(JSON.parse(readFileSync(join(shim, 'package.json'))).peerDependencies)
+            .filter(name => name.startsWith('@deepseek-ai/'))
+          const packages = new Map()
+          const collect = directory => {
+            for (const entry of readdirSync(directory, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === '.git') continue
+              const path = join(directory, entry.name)
+              if (entry.isDirectory()) collect(path)
+              if (entry.isFile() && entry.name === 'package.json') {
+                const manifest = JSON.parse(readFileSync(path))
+                if (typeof manifest.name === 'string') packages.set(manifest.name, dirname(path))
+              }
+            }
+          }
+
+          collect(join(upstream, 'packages'))
+          packages.set('@deepseek-ai/cordis', join(upstream, 'vendor', 'cordis'))
+          for (const peer of peers) {
+            const source = packages.get(peer)
+            if (source === undefined) throw new Error(`missing pinned DSH peer ${peer}`)
+            const target = join(shim, 'node_modules', peer)
+            mkdirSync(dirname(target), { recursive: true })
+            symlinkSync(source, target)
+          }
+          NODE
+
       - name: Verify release tag
         run: |
           version="$(node -p "require('./package.json').version")"
           test "$GITHUB_REF_NAME" = "v$version"
 
-      - run: pnpm run format:check
-      - run: pnpm run lint
-      - run: pnpm run test
-      - run: pnpm run build
+      - run: pnpm run check
       - run: git diff --exit-code -- lib
       - run: mkdir -p dist
       - run: pnpm pack --pack-destination dist

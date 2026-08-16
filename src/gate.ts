@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-agent'
 import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { settingsNamespace, installSettingsSection } from '@deepseek-ai/dsh-settings'
+import type { SettingsSectionHooks } from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-settings'
 import type { AssembleContext, PromptAssembly } from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-system-prompt'
@@ -25,6 +26,10 @@ export interface Config {
   /** Empty disables automatic matching; the bundle defaults to `gpt-5.6-*`. */
   modelPatterns: string[]
   modelOverrides: CodexModelOverride[]
+}
+
+interface ClientExposedSettingsHooks<T> extends SettingsSectionHooks<T> {
+  expose: 'client'
 }
 
 export const Config: z<Config> = z.object({
@@ -270,7 +275,7 @@ function escapeXml(text: string): string {
 export function apply(ctx: Context, config: Config): void {
   let source: () => Config = () => config
   const logger = ctx.logger('codex-gate')
-  installSettingsSection(ctx, CODEX_SETTINGS_NAMESPACE, Config, config, {
+  const settingsHooks: ClientExposedSettingsHooks<Config> = {
     expose: 'client',
     validate: assertServiceableConfig,
     setSource: current => {
@@ -285,7 +290,8 @@ export function apply(ctx: Context, config: Config): void {
         current.modelOverrides.length,
       )
     },
-  })
+  }
+  installSettingsSection(ctx, CODEX_SETTINGS_NAMESPACE, Config, config, settingsHooks)
 
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembled = await next()

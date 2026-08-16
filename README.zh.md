@@ -16,11 +16,34 @@ dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
 dsh --profile web --dump-config
 ```
 
-这能使用 bundle 内置的 `gpt-5.6-*` 规则。当前未修补的 DSH WebUI 不能显示或保存 shim 设置卡；需要该卡片时请使用下方的源码 checkout 集成。
+这能使用 bundle 内置的 `gpt-5.6-*` 规则。无需修补 DSH WebUI 即可安装和配置；未修补的 WebUI 只是不会显示或保存 shim 设置卡。
 
-### 源码 checkout 集成
+### 不修补 WebUI 的配置方式
 
-DSH `47f943859bef60e4160492346772ded9b24f765a` 尚不能让外部 bundle 将 settings namespace 暴露给 WebUI。对应 Release 会附带 `deepseek-harness-settings-client-exposure-47f9438.patch`：这是一个不包含 OpenTritium 或 Codex 行为的通用 DSH settings 扩展。只有想在源码构建的 DSH WebUI 中显示 Codex 设置卡时，才需要应用它。
+无需修改 DSH 源码。settings provider 会将 `$DSH_HOME/settings.yaml`（通常是 `~/.dsh/settings.yaml`）中 `opentritium-codex` 分节叠加到 bundle 默认值之上。直接创建或编辑该分节；在显式填写 `modelPatterns` 之前，默认的 `gpt-5.6-*` 自动规则仍然生效。
+
+```yaml
+opentritium-codex:
+  enabled: true
+  modelPatterns:
+    - gpt-5.6-*
+    - deepseek-v4-*
+  modelOverrides:
+    - provider: openai
+      model: gpt-5.6-luna
+      enabled: true
+    - provider: example-provider
+      model: experimental-model
+      enabled: false
+```
+
+`enabled: false` 会关闭全局 shim。`modelPatterns` 会替换自动启用规则列表；填 `modelPatterns: []` 可以关闭自动匹配。每条 `modelOverrides` 是精确的 provider/model 决策，优先于自动规则；未添加的模型仍遵循自动规则。provider 和 model 必须与 DSH 解析出的路由完全一致。
+
+文件 settings provider 会监听合法的配置修改，因此路由策略会热更新。如果 profile 使用其他 settings provider，应通过该 provider 配置同一个 namespace。
+
+### 可选的 WebUI 设置卡
+
+DSH `47f943859bef60e4160492346772ded9b24f765a` 尚不能让外部 bundle 将 settings namespace 暴露给 WebUI。不需要设置卡时，只安装 tarball 并按上面的 `settings.yaml` 配置即可。若希望获得更好的 GUI 设置体验，对应 Release 会附带 `deepseek-harness-settings-client-exposure-47f9438.patch`：这是一个不包含 OpenTritium 或 Codex 行为的通用 WebUI settings 白名单扩展。
 
 只在该精确、干净的 DSH commit 上应用 patch，重建 DSH 后再安装 Release tarball：
 
@@ -38,7 +61,16 @@ pnpm dsh --profile web --dump-config
 
 该 patch 为 settings owner 增加显式的 `expose: 'client'` 选项；不会加载本 bundle、添加 OpenTritium row 或改变模型/工具行为。不要对 dirty checkout 或其他 commit 应用它；应等待上游提供等价能力。
 
-卸载这套源码集成时，先移除 bundle，再反向应用同一 patch 并重建：
+### 卸载
+
+移除 bundle 不需要 DSH patch，并会恢复纯上游的 profile 组合：
+
+```sh
+dsh plugin --profile web remove @opentritium/dsh-codex-shim
+dsh --profile web --dump-config
+```
+
+若之前应用过可选的 WebUI patch，请先移除 bundle。只有确认没有其他本地外部 bundle 使用 `expose: 'client'` 时，才反向应用 patch：
 
 ```sh
 pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
@@ -48,16 +80,9 @@ pnpm run build
 pnpm dsh --profile web --dump-config
 ```
 
-`dsh plugin remove` 会删除 profile 依赖和 bundle layer。若也要丢弃已经保存的 shim 偏好，请在停止 DSH 后，只删除 `$DSH_HOME/settings.yaml` 中的 `opentritium-codex:` 分节。只有确认没有其他本地外部 bundle 使用 `expose: 'client'` 时，才应反向应用 DSH patch。
+`dsh plugin remove` 会删除 profile 依赖和 bundle layer。若也要丢弃已经保存的 shim 偏好，请在停止 DSH 后，只删除 `$DSH_HOME/settings.yaml` 中的 `opentritium-codex:` 分节。
 
 profile 会先加载 `@deepseek-ai/dsh-base`，再加载本 bundle。模型凭据、provider 配置和环境变量应放在 profile 中。
-
-移除 bundle 即可恢复上游组合：
-
-```sh
-dsh plugin --profile web remove @opentritium/dsh-codex-shim
-dsh --profile web --dump-config
-```
 
 ## 路由和配置
 
@@ -120,7 +145,7 @@ shim 只消费 capability 定义，不实现或选择 provider。实际 provider
 
 | 组件             | 支持基线                                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| DeepSeek Harness | 源码集成固定为 commit `47f943859bef60e4160492346772ded9b24f765a`（`0.1.0-rc.5`）及其对应的 settings-client-exposure patch；不假定附近 commit 兼容。 |
+| DeepSeek Harness | tarball 安装固定为 commit `47f943859bef60e4160492346772ded9b24f765a`（`0.1.0-rc.5`）。对应的 settings-client-exposure patch 是可选项，仅用于显示 WebUI 设置卡；不假定附近 commit 兼容。 |
 | DSH peers        | `@deepseek-ai/dsh-*` peer 目标为 `^0.1.0-rc.5`；Cordis 目标为 `^4.0.1`，避免安装第二个 Cordis runtime。                                   |
 | Node.js          | `^22.19.0` 或 `>=24.0.0`。                                                                                                                |
 | React/WebUI      | React 18；浏览器代码使用 DSH 的 locale、settings、connection、runtime 和 slot API。                                                       |
@@ -140,7 +165,7 @@ pnpm run bench
 
 发布包包含 `lib/`、`cordis.patch.yml`、两份 README 和许可证。persona 与 locale 源文件会在 `tsdown` 构建时打包。
 
-推送与 `package.json` 版本严格对应的 `vX.Y.Z` tag 会触发 GitHub Actions 发布流程。它会验证对应的源码集成、运行 `pnpm run check`，将打出的 tarball 和 patch 附加到 GitHub Release，不会发布到 npm。
+推送与 `package.json` 版本严格对应的 `vX.Y.Z` tag 会触发 GitHub Actions 发布流程。它会验证可选的源码集成、运行 `pnpm run check`，将打出的 tarball 和可选 GUI patch 附加到 GitHub Release，不会发布到 npm。
 
 ## 许可证
 

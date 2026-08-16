@@ -16,11 +16,34 @@ dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
 dsh --profile web --dump-config
 ```
 
-This works with the bundled `gpt-5.6-*` rule. On the current unpatched DSH WebUI, the shim settings card cannot be displayed or saved; use the source checkout integration below when the card is required.
+This works with the bundled `gpt-5.6-*` rule. The current unpatched DSH WebUI does not display or save the shim settings card, but the bundle remains configurable through `settings.yaml` below. Apply the optional source checkout patch only when the settings card is required.
 
-### Source checkout integration
+### Configure without a WebUI patch
 
-DSH `47f943859bef60e4160492346772ded9b24f765a` does not yet let an external bundle expose a settings namespace to the WebUI. The matching release includes `deepseek-harness-settings-client-exposure-47f9438.patch`: a general DSH settings extension with no OpenTritium or Codex behavior. It is required only when the Codex settings card must appear in a source-built DSH WebUI.
+No DSH source patch is required to install or configure the bundle. The settings provider layers the `opentritium-codex` section in `$DSH_HOME/settings.yaml` (normally `~/.dsh/settings.yaml`) above the bundle's defaults. Create or edit that section directly; the default `gpt-5.6-*` automatic rule remains in force until `modelPatterns` is explicitly set.
+
+```yaml
+opentritium-codex:
+  enabled: true
+  modelPatterns:
+    - gpt-5.6-*
+    - deepseek-v4-*
+  modelOverrides:
+    - provider: openai
+      model: gpt-5.6-luna
+      enabled: true
+    - provider: example-provider
+      model: experimental-model
+      enabled: false
+```
+
+`enabled: false` turns the shim off globally. `modelPatterns` replaces the automatic-rule list; use `modelPatterns: []` to disable automatic matching. Each `modelOverrides` row is an exact provider/model decision and takes precedence over the patterns. Omit the row to let that model follow the automatic rules. Provider and model must exactly match the resolved DSH route.
+
+The file-backed settings provider watches valid edits, so the route policy updates live. If a profile uses another settings provider, configure the same namespace through that provider instead.
+
+### Optional WebUI settings card
+
+DSH `47f943859bef60e4160492346772ded9b24f765a` does not yet let an external bundle expose a settings namespace to the WebUI. Install the tarball and use `settings.yaml` above if a settings card is unnecessary. For the better GUI experience, the matching release includes `deepseek-harness-settings-client-exposure-47f9438.patch`: a general WebUI settings allowlist extension with no OpenTritium or Codex behavior.
 
 Apply the patch only to that exact clean DSH commit, rebuild DSH, then install the release tarball:
 
@@ -38,7 +61,16 @@ pnpm dsh --profile web --dump-config
 
 The patch gives settings owners an explicit `expose: 'client'` option. It does not load this bundle, add an OpenTritium row, or alter model/tool behavior. Do not apply it to a dirty checkout or a different commit; wait for the upstream equivalent instead.
 
-To uninstall this source integration, remove the bundle first, then reverse the exact patch and rebuild:
+### Uninstall
+
+Removing the bundle needs no DSH patch and restores the plain upstream profile composition:
+
+```sh
+dsh plugin --profile web remove @opentritium/dsh-codex-shim
+dsh --profile web --dump-config
+```
+
+If the optional WebUI patch was applied, remove the bundle first. Only reverse the patch when no other local external bundle uses `expose: 'client'`:
 
 ```sh
 pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
@@ -48,16 +80,9 @@ pnpm run build
 pnpm dsh --profile web --dump-config
 ```
 
-`dsh plugin remove` removes the profile dependency and its bundle layer. To discard saved shim preferences as well, remove only the `opentritium-codex:` section from `$DSH_HOME/settings.yaml` after stopping DSH. Reverse the DSH patch only when no other local external bundle uses `expose: 'client'`.
+`dsh plugin remove` removes the profile dependency and its bundle layer. To discard saved shim preferences as well, remove only the `opentritium-codex:` section from `$DSH_HOME/settings.yaml` after stopping DSH.
 
 The profile loads `@deepseek-ai/dsh-base` first and this bundle afterward. Keep model credentials, provider settings, and environment variables in the profile.
-
-Remove it to return to the upstream composition:
-
-```sh
-dsh plugin --profile web remove @opentritium/dsh-codex-shim
-dsh --profile web --dump-config
-```
 
 ## Route and configuration
 
@@ -120,7 +145,7 @@ The goal is the closest practical Codex experience over DSH capabilities. Runtim
 
 | Component        | Supported baseline                                                                                                                                                                             |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DeepSeek Harness | Source integration is pinned to commit `47f943859bef60e4160492346772ded9b24f765a` (`0.1.0-rc.5`) and its matching settings-client-exposure patch. Do not assume nearby commits are compatible. |
+| DeepSeek Harness | Tarball installation is pinned to commit `47f943859bef60e4160492346772ded9b24f765a` (`0.1.0-rc.5`). The matching settings-client-exposure patch is optional and only enables the WebUI settings card. Do not assume nearby commits are compatible. |
 | DSH peers        | `@deepseek-ai/dsh-*` peers target `^0.1.0-rc.5`; Cordis targets `^4.0.1` so the plugin does not install a second Cordis runtime.                                                               |
 | Node.js          | `^22.19.0` or `>=24.0.0`.                                                                                                                                                                      |
 | React/WebUI      | React 18; browser code uses DSH client locale, settings, connection, runtime, and slot APIs.                                                                                                   |
@@ -140,7 +165,7 @@ pnpm run bench
 
 The published package includes `lib/`, `cordis.patch.yml`, both README files, and the license. Source persona and locale assets are bundled during `tsdown` build.
 
-Pushing a `vX.Y.Z` tag that exactly matches `package.json` runs the GitHub Actions release workflow. It verifies the matching source integration, runs `pnpm run check`, attaches the packed tarball and patch to a GitHub Release, and does not publish to npm.
+Pushing a `vX.Y.Z` tag that exactly matches `package.json` runs the GitHub Actions release workflow. It verifies the optional source integration, runs `pnpm run check`, attaches the packed tarball and optional GUI patch to a GitHub Release, and does not publish to npm.
 
 ## License
 

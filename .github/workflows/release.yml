@@ -12,19 +12,19 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: deepseek-ai/deepseek-harness
           ref: 47f943859bef60e4160492346772ded9b24f765a
           path: upstream
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.7.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -33,14 +33,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
         working-directory: upstream
-
-      - run: pnpm run build
-        working-directory: upstream
-
-      - name: Apply the required upstream extension
-        run: git -C upstream apply --check "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
-
-      - run: git -C upstream apply "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
 
       - run: pnpm run build
         working-directory: upstream
@@ -89,7 +81,22 @@ jobs:
       - run: mkdir -p dist
       - run: pnpm pack --pack-destination dist
 
-      - uses: actions/upload-artifact@v4
+      - name: Verify tarball installation without a WebUI patch
+        env:
+          DSH_HOME: ${{ runner.temp }}/dsh-codex-shim-release-home
+        run: |
+          pnpm dsh plugin --profile web add "$GITHUB_WORKSPACE"/dist/*.tgz
+          pnpm dsh --profile web --dump-config | grep -F "opentritium-codex-gate"
+        working-directory: upstream
+
+      - name: Verify the optional WebUI settings patch
+        run: |
+          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
+          git -C upstream apply "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
+          pnpm run build
+        working-directory: upstream
+
+      - uses: actions/upload-artifact@v7
         with:
           name: dsh-codex-shim-${{ github.ref_name }}
           path: |

@@ -36,7 +36,7 @@ profile therefore keeps the host tools and prompt without loading browser code,
 and a partial WebUI does not lose tool rows because its settings surface is
 absent.
 
-`web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, or arbitrary page fetch. It delegates search to the provider selected by the DSH profile; the shim owns neither a web provider nor provider credentials.
+`web_run` is deliberately search-only. It accepts `search_query: [{ q }]`; it does not support `open`, `click`, `find`, screenshots, or arbitrary page fetch. It requires the `@deepseek-ai/dsh-web` capability definition, then delegates search to the provider selected by the DSH profile; the shim owns neither a web provider nor provider credentials.
 
 ## Upstream Seam Required
 

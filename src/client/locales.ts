@@ -5,14 +5,14 @@ export const NS = 'codex'
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
-  'settings.title': 'Codex 模拟',
+  'settings.title': 'Codex 环境模拟',
   'settings.description': '为选定的模型模拟 Codex 工具与提示词界面。',
   'settings.enabled': '全局开关',
   'settings.enabledHint': '关闭后所有路由继续使用宿主的工具与提示词界面。',
   'settings.patterns': '自动启用规则',
   'settings.patternsPlaceholder': '例如：gpt-*\ncodex*\no1*',
   'settings.patternsHint': '匹配这些 glob 的模型默认启用；* 不能与其他规则共用。',
-  'settings.models': '模型例外',
+  'settings.models': '显式 Override',
   'settings.modelsHint': '未添加的模型遵循自动启用规则；添加后可明确设为启用或禁用。',
   'settings.modelsLoading': '正在加载模型…',
   'settings.modelsFailed': '模型目录不可用',
@@ -55,14 +55,14 @@ export type CodexKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
-  'settings.title': 'Codex simulation',
+  'settings.title': 'Codex environment simulation',
   'settings.description': 'Simulates the Codex tool and prompt surface for selected models.',
   'settings.enabled': 'Global switch',
   'settings.enabledHint': 'When off, all routes keep the host tool and prompt surface.',
   'settings.patterns': 'Automatic enable rules',
   'settings.patternsPlaceholder': 'For example: gpt-*\ncodex*\no1*',
   'settings.patternsHint': 'Models matching these globs are enabled by default; * cannot be combined with another rule.',
-  'settings.models': 'Model exceptions',
+  'settings.models': 'Explicit overrides',
   'settings.modelsHint': 'Models not listed here follow the automatic enable rules; add a model to explicitly enable or disable it.',
   'settings.modelsLoading': 'Loading models…',
   'settings.modelsFailed': 'Model directory unavailable',

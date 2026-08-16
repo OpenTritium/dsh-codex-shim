@@ -38,27 +38,27 @@ The default automatic pattern is `gpt-5.6-*`. Users can replace it with patterns
 
 The following tools are registered by the bundle and advertised only on an active Codex route. “Degraded” means the underlying DSH capability cannot provide the complete Codex operation.
 
-| Tool | Status | DSH capability | Notes |
-| --- | --- | --- | --- |
-| `exec_command` | Available | `ctx.shell`, sandbox policy, approval | Runs commands, returns bounded output, and keeps sessions for later polling. |
-| `write_stdin` | Degraded | `ShellProcess` reads | Polls an existing session. Non-empty stdin is rejected because the current DSH shell definition has no stdin-write operation. |
-| `apply_patch` | Available | `ctx.fs`, `ctx.shell` | Supports Codex patch markers, file add/delete/update/move, and fuzzy hunk matching. `apply-patch` and `applypatch` remain compatibility aliases but are not advertised. |
-| `view_image` | Conditional | `ctx.fs`, attachment service | Reads PNG, JPEG, WebP, and GIF files when the profile provides filesystem and image-attachment capabilities. |
-| `update_plan` | Available | Durable `todo/write` session event | Stores `pending`, `in_progress`, and `completed` steps with at most one active step. |
-| `web_run` | Search-only | `ctx.web.search()` | Accepts multiple `search_query` items and returns provider sources. It does not implement `open`, `click`, `find`, screenshots, or arbitrary fetch. |
+| Tool           | Status      | DSH capability                        | Notes                                                                                                                                                                   |
+| -------------- | ----------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exec_command` | Available   | `ctx.shell`, sandbox policy, approval | Runs commands, returns bounded output, and keeps sessions for later polling.                                                                                            |
+| `write_stdin`  | Degraded    | `ShellProcess` reads                  | Polls an existing session. Non-empty stdin is rejected because the current DSH shell definition has no stdin-write operation.                                           |
+| `apply_patch`  | Available   | `ctx.fs`, `ctx.shell`                 | Supports Codex patch markers, file add/delete/update/move, and fuzzy hunk matching. `apply-patch` and `applypatch` remain compatibility aliases but are not advertised. |
+| `view_image`   | Conditional | `ctx.fs`, attachment service          | Reads PNG, JPEG, WebP, and GIF files when the profile provides filesystem and image-attachment capabilities.                                                            |
+| `update_plan`  | Available   | Durable `todo/write` session event    | Stores `pending`, `in_progress`, and `completed` steps with at most one active step.                                                                                    |
+| `web_run`      | Search-only | `ctx.web.search()`                    | Accepts multiple `search_query` items and returns provider sources. It does not implement `open`, `click`, `find`, screenshots, or arbitrary fetch.                     |
 
 ## Masked host tools
 
 When a replacement tool is present, the gate hides overlapping host tools from the active prompt advertisement. It does not unregister them, so the host surface returns when the route changes or the shim is removed.
 
-| Shim tool present | Masked host tools |
-| --- | --- |
-| `exec_command` | `bash`, `pwsh`, `read`, `glob`, `grep` |
+| Shim tool present              | Masked host tools                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `exec_command`                 | `bash`, `pwsh`, `read`, `glob`, `grep`                                                                  |
 | `exec_command` + `write_stdin` | `terminal_close`, `terminal_list`, `terminal_open`, `terminal_read`, `terminal_send`, `terminal_signal` |
-| `apply_patch` | `edit`, `str_replace_editor`, `write` |
-| `view_image` | `read_image` |
-| `update_plan` | `todo_write` |
-| `web_run` | `web_search` |
+| `apply_patch`                  | `edit`, `str_replace_editor`, `write`                                                                   |
+| `view_image`                   | `read_image`                                                                                            |
+| `update_plan`                  | `todo_write`                                                                                            |
+| `web_run`                      | `web_search`                                                                                            |
 
 Masking is scope-aware. If a prerequisite tool is not resolvable in the current composition, its mask is not applied.
 
@@ -83,15 +83,17 @@ The goal is the closest practical Codex experience over DSH capabilities. Runtim
 
 ## Compatibility
 
-| Component | Supported baseline |
-| --- | --- |
-| DeepSeek Harness | Upstream commit `47f943859bef60e4160492346772ded9b24f765a`, corresponding to `0.1.0-rc.5`; compatible updates within the same `0.1.x` line may work. |
-| DSH peers | `@deepseek-ai/dsh-*` peers target `^0.1.0-rc.5`; Cordis targets `^4.0.1` so the plugin does not install a second Cordis runtime. |
-| Node.js | `^22.19.0` or `>=24.0.0`. |
-| React/WebUI | React 18; browser code uses DSH client locale, settings, connection, runtime, and slot APIs. |
-| Codex reference | `@openai/codex` / `codex-cli 0.147.0`, used as the tool-name, patch-behavior, and app-server product reference. This package does not claim full Codex runtime or wire-protocol compatibility. |
+| Component        | Supported baseline                                                                                                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DeepSeek Harness | Upstream commit `47f943859bef60e4160492346772ded9b24f765a`, corresponding to `0.1.0-rc.5`; compatible updates within the same `0.1.x` line may work.                                           |
+| DSH peers        | `@deepseek-ai/dsh-*` peers target `^0.1.0-rc.5`; Cordis targets `^4.0.1` so the plugin does not install a second Cordis runtime.                                                               |
+| Node.js          | `^22.19.0` or `>=24.0.0`.                                                                                                                                                                      |
+| React/WebUI      | React 18; browser code uses DSH client locale, settings, connection, runtime, and slot APIs.                                                                                                   |
+| Codex reference  | `@openai/codex` / `codex-cli 0.147.0`, used as the tool-name, patch-behavior, and app-server product reference. This package does not claim full Codex runtime or wire-protocol compatibility. |
 
 Each shim release is composition-tested against the listed baseline. Recheck tool schemas, prompt sections, approval/sandbox fields, and WebUI slot contracts after upgrading DSH or Codex.
+
+**Windows:** behavior and compatibility on Windows are not yet tested. Development and testing target Unix-style shell and filesystem semantics; please report issues if you run into problems on Windows.
 
 ## Development
 
@@ -102,6 +104,8 @@ pnpm run bench
 ```
 
 The published package includes `lib/`, `cordis.patch.yml`, both README files, and the license. Source persona and locale assets are bundled during `tsdown` build.
+
+Pushing a `vX.Y.Z` tag that exactly matches `package.json` runs the GitHub Actions release workflow. It runs `pnpm run check`, attaches the packed tarball to a GitHub Release, and does not publish to npm.
 
 ## License
 

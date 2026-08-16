@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify release tag
+        run: test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
+
+      - run: pnpm run check
+      - run: mkdir -p dist
+      - run: pnpm pack --pack-destination dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-codex-shim-${{ github.ref_name }}
+          path: dist/*.tgz
+          if-no-files-found: error
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.tgz --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/*.tgz --target "$GITHUB_SHA" --title "$GITHUB_REF_NAME" --generate-notes
+          fi

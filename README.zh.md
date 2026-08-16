@@ -38,27 +38,27 @@ bundle 会全局挂载 gate，但只有同时满足以下条件时才应用 Code
 
 下列工具由 bundle 注册，并只在激活的 Codex 路由中向模型展示。“降级”表示底层 DSH capability 尚未覆盖完整 Codex 操作。
 
-| 工具 | 状态 | DSH capability | 说明 |
-| --- | --- | --- | --- |
-| `exec_command` | 可用 | `ctx.shell`、sandbox policy、approval | 执行命令、限制输出，并保留 session 供后续轮询。 |
-| `write_stdin` | 降级可用 | `ShellProcess` 读取 | 可以轮询已有 session。当前 DSH shell 定义没有 stdin 写入操作，非空 stdin 会明确拒绝。 |
-| `apply_patch` | 可用 | `ctx.fs`、`ctx.shell` | 支持 Codex patch marker、添加/删除/更新/移动文件和模糊匹配。`apply-patch`、`applypatch` 仅作为兼容别名，不在 surface 中展示。 |
-| `view_image` | 条件可用 | `ctx.fs`、attachment service | profile 提供 filesystem 和图片 attachment capability 时读取 PNG、JPEG、WebP、GIF。 |
-| `update_plan` | 可用 | 持久化 `todo/write` session event | 保存 `pending`、`in_progress`、`completed` 步骤，最多一个进行中步骤。 |
-| `web_run` | 仅搜索 | `ctx.web.search()` | 接收多个 `search_query` 并返回 provider 来源；不实现 `open`、`click`、`find`、截图或任意 fetch。 |
+| 工具           | 状态     | DSH capability                        | 说明                                                                                                                          |
+| -------------- | -------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `exec_command` | 可用     | `ctx.shell`、sandbox policy、approval | 执行命令、限制输出，并保留 session 供后续轮询。                                                                               |
+| `write_stdin`  | 降级可用 | `ShellProcess` 读取                   | 可以轮询已有 session。当前 DSH shell 定义没有 stdin 写入操作，非空 stdin 会明确拒绝。                                         |
+| `apply_patch`  | 可用     | `ctx.fs`、`ctx.shell`                 | 支持 Codex patch marker、添加/删除/更新/移动文件和模糊匹配。`apply-patch`、`applypatch` 仅作为兼容别名，不在 surface 中展示。 |
+| `view_image`   | 条件可用 | `ctx.fs`、attachment service          | profile 提供 filesystem 和图片 attachment capability 时读取 PNG、JPEG、WebP、GIF。                                            |
+| `update_plan`  | 可用     | 持久化 `todo/write` session event     | 保存 `pending`、`in_progress`、`completed` 步骤，最多一个进行中步骤。                                                         |
+| `web_run`      | 仅搜索   | `ctx.web.search()`                    | 接收多个 `search_query` 并返回 provider 来源；不实现 `open`、`click`、`find`、截图或任意 fetch。                              |
 
 ## 隐藏的上游工具
 
 当替代工具存在时，gate 会从当前 prompt advertisement 中隐藏重叠的上游工具。它不会注销这些工具，因此路由切换或移除 shim 后，上游 surface 会恢复。
 
-| 已存在的 shim 工具 | 隐藏的上游工具 |
-| --- | --- |
-| `exec_command` | `bash`、`pwsh`、`read`、`glob`、`grep` |
+| 已存在的 shim 工具             | 隐藏的上游工具                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `exec_command`                 | `bash`、`pwsh`、`read`、`glob`、`grep`                                                                  |
 | `exec_command` + `write_stdin` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` |
-| `apply_patch` | `edit`、`str_replace_editor`、`write` |
-| `view_image` | `read_image` |
-| `update_plan` | `todo_write` |
-| `web_run` | `web_search` |
+| `apply_patch`                  | `edit`、`str_replace_editor`、`write`                                                                   |
+| `view_image`                   | `read_image`                                                                                            |
+| `update_plan`                  | `todo_write`                                                                                            |
+| `web_run`                      | `web_search`                                                                                            |
 
 Mask 具有 scope 感知能力。如果前置工具无法在当前 composition 中解析，对应 mask 不会生效。
 
@@ -83,15 +83,17 @@ shim 只消费 capability 定义，不实现或选择 provider。实际 provider
 
 ## 兼容性
 
-| 组件 | 支持基线 |
-| --- | --- |
-| DeepSeek Harness | 上游 commit `47f943859bef60e4160492346772ded9b24f765a`，对应 `0.1.0-rc.5`；同一 `0.1.x` 系列的兼容更新可能可以工作。 |
-| DSH peers | `@deepseek-ai/dsh-*` peer 目标为 `^0.1.0-rc.5`；Cordis 目标为 `^4.0.1`，避免安装第二个 Cordis runtime。 |
-| Node.js | `^22.19.0` 或 `>=24.0.0`。 |
-| React/WebUI | React 18；浏览器代码使用 DSH 的 locale、settings、connection、runtime 和 slot API。 |
-| Codex 参照 | `@openai/codex` / `codex-cli 0.147.0`，用于工具名、patch 行为和 app-server 产品参照。本包不声明完整 Codex runtime 或 wire protocol 兼容。 |
+| 组件             | 支持基线                                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| DeepSeek Harness | 上游 commit `47f943859bef60e4160492346772ded9b24f765a`，对应 `0.1.0-rc.5`；同一 `0.1.x` 系列的兼容更新可能可以工作。                      |
+| DSH peers        | `@deepseek-ai/dsh-*` peer 目标为 `^0.1.0-rc.5`；Cordis 目标为 `^4.0.1`，避免安装第二个 Cordis runtime。                                   |
+| Node.js          | `^22.19.0` 或 `>=24.0.0`。                                                                                                                |
+| React/WebUI      | React 18；浏览器代码使用 DSH 的 locale、settings、connection、runtime 和 slot API。                                                       |
+| Codex 参照       | `@openai/codex` / `codex-cli 0.147.0`，用于工具名、patch 行为和 app-server 产品参照。本包不声明完整 Codex runtime 或 wire protocol 兼容。 |
 
 每个 shim 版本都会针对表中的基线进行组合验证。升级 DSH 或 Codex 后，应重新检查工具 schema、prompt section、approval/sandbox 字段和 WebUI slot contract。
+
+**Windows：** Windows 上的行为和兼容性尚未测试。当前开发和测试以 Unix 风格的 shell 与 filesystem 语义为目标；若在 Windows 上运行遇到问题，请反馈。
 
 ## 开发
 
@@ -102,6 +104,8 @@ pnpm run bench
 ```
 
 发布包包含 `lib/`、`cordis.patch.yml`、两份 README 和许可证。persona 与 locale 源文件会在 `tsdown` 构建时打包。
+
+推送与 `package.json` 版本严格对应的 `vX.Y.Z` tag 会触发 GitHub Actions 发布流程。它运行 `pnpm run check`，将打出的 tarball 附加到 GitHub Release，不会发布到 npm。
 
 ## 许可证
 

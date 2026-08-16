@@ -169,6 +169,75 @@
   margin-bottom: 8px;
 }
 
+.planItems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.planStep {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planItem[data-status='completed'] .planStep {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.planStatusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.planCompletedIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--dsw-alias-state-success-primary);
+  color: var(--dsw-alias-bg-base);
+}
+
+.planLoadingIcon {
+  color: var(--dsw-alias-state-business-primary);
+  animation: dsh-codex-plan-loading 1s linear infinite;
+}
+
+.planPendingIcon {
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 1px dashed var(--dsw-alias-label-caption);
+  border-radius: 50%;
+}
+
+@keyframes dsh-codex-plan-loading {
+  to { transform: rotate(360deg); }
+}
+
 .planChange {
   display: -webkit-box;
   margin: 0 0 8px;
@@ -290,5 +359,9 @@
 
   .planProgressValue {
     transition: none;
+  }
+
+  .planLoadingIcon {
+    animation: none;
   }
 }

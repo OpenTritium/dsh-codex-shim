@@ -5,9 +5,11 @@ import {
   DiffBlock,
   DisclosureRow,
   IconApiOutline14,
+  IconCheckOutline14,
   IconChecklistOutline14,
   IconEditOutline16,
   IconInspectOutline12,
+  IconLoadingOutline16,
   IconPaperclipOutline16,
   IconSparkle16,
   StateDot,
@@ -17,7 +19,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import css from './CodexToolRow.module.css'
-import { parsePlanPresentation, type PlanPresentation } from './plan-presentation.ts'
+import { parsePlanPresentation, type PlanPresentation, type PlanStatus } from './plan-presentation.ts'
 import { splitTerminalOutput } from './terminal-output.ts'
 
 type CodexToolRowProps = ToolCallViewProps & PropsLocale<'codex'>
@@ -158,6 +160,22 @@ function stateLabel(state: CodexRowState, t: CodexToolRowProps['t']): string | n
 
 function planCompletedCount(plan: PlanPresentation): number {
   return plan.items.reduce((count, item) => count + (item.status === 'completed' ? 1 : 0), 0)
+}
+
+function planStatusIcon(status: PlanStatus): ReactNode {
+  switch (status) {
+    case 'completed': return <span className={css.planCompletedIcon}><IconCheckOutline14 size={12} /></span>
+    case 'in_progress': return <IconLoadingOutline16 size={14} className={css.planLoadingIcon} />
+    case 'pending': return <span className={css.planPendingIcon} />
+  }
+}
+
+function planStatusLabel(status: PlanStatus, t: CodexToolRowProps['t']): string {
+  switch (status) {
+    case 'completed': return t('row.planCompleted')
+    case 'in_progress': return t('row.planInProgress')
+    case 'pending': return t('row.planPending')
+  }
 }
 
 function leadingFor(state: CodexRowState, icon: ReactNode): ReactNode {
@@ -316,6 +334,14 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
                     />
                   </span>
                 </div>
+                <ol className={css.planItems}>
+                  {plan.items.map((item, index) => (
+                    <li className={css.planItem} data-status={item.status} key={`${item.step}:${index}`}>
+                      <span className={css.planStep}>{item.step}</span>
+                      <span className={css.planStatusIcon} aria-label={planStatusLabel(item.status, t)}>{planStatusIcon(item.status)}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             </section>
           ) : null}

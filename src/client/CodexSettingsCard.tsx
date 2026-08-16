@@ -33,7 +33,6 @@ export function CodexSettingsCard(props: Props) {
       <IconChevronDownOutline14 className={`${css.chevron} ${open ? css.chevronOpen : ''}`} />
     </button>
     {open ? <div className={css.body}>
-      <div className={css.footer}>{state.failed ? <p className={css.error} role="status">{props.t('settings.failed')}</p> : null}<button type="button" className={css.button} disabled={!state.dirty || disabled} onClick={props.discard}>{props.t('settings.discard')}</button><button type="button" className={css.button} disabled={saveDisabled} onClick={props.save}>{props.t(state.saving ? 'settings.saving' : 'settings.save')}</button></div>
       <div className={`${css.field} ${css.switchField}`}>
         <div className={css.fieldHead}><span className={css.label}>{props.t('settings.enabled')}</span>{field('enabled').overridden ? <button type="button" className={css.reset} disabled={disabled} onClick={() => props.reset('enabled')}>{props.t('settings.reset')}</button> : null}<label className={css.switch}><input className={css.switchInput} type="checkbox" role="switch" aria-label={props.t('settings.enabled')} checked={field('enabled').text === 'true'} disabled={disabled} onChange={event => props.edit('enabled', String(event.target.checked))} /><span className={css.switchTrack} aria-hidden /></label></div>
         <p className={css.hint}>{props.t('settings.enabledHint')}</p>
@@ -49,6 +48,7 @@ export function CodexSettingsCard(props: Props) {
           {(['enabled', 'disabled'] as const).map(decision => <button type="button" className={`${css.decision} ${row.decision === decision ? css.decisionSelected : ''}`} aria-pressed={row.decision === decision} disabled={disabled} key={decision} onClick={() => props.setModelDecision(row.provider, row.model, decision)}>{props.t(`settings.decision.${decision}`)}</button>)}
         </div><Tooltip label={props.t('settings.modelsRemove')}><button type="button" className={css.removeButton} aria-label={`${props.t('settings.modelsRemove')}: ${row.providerName} / ${row.modelName}`} disabled={disabled} onClick={() => props.removeModelException(row.provider, row.model)}><IconTrashOutline16 size={14} /></button></Tooltip></div></li>)}</ul>}
       </div>
+      <div className={css.footer}>{state.failed ? <p className={css.error} role="status">{props.t('settings.failed')}</p> : null}<button type="button" className={css.button} disabled={!state.dirty || disabled} onClick={props.discard}>{props.t('settings.discard')}</button><button type="button" className={css.button} disabled={saveDisabled} onClick={props.save}>{props.t(state.saving ? 'settings.saving' : 'settings.save')}</button></div>
     </div> : null}
   </li>
 }

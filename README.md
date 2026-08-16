@@ -8,12 +8,47 @@ This is a shim, not a Codex runtime. It does not start a Codex app-server, handl
 
 ## Install in a profile
 
-Install the bundle into the normal WebUI profile. `dsh plugin` owns the profile manifest and dependency list:
+Install the prebuilt bundle into the normal WebUI profile. `dsh plugin` owns the profile manifest and dependency list:
 
 ```sh
-dsh plugin --profile web add https://github.com/OpenTritium/dsh-codex-shim.git
+gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz'
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
 dsh --profile web --dump-config
 ```
+
+This works with the bundled `gpt-5.6-*` rule. On the current unpatched DSH WebUI, the shim settings card cannot be displayed or saved; use the source checkout integration below when the card is required.
+
+### Source checkout integration
+
+DSH `47f943859bef60e4160492346772ded9b24f765a` does not yet let an external bundle expose a settings namespace to the WebUI. The matching release includes `deepseek-harness-settings-client-exposure-47f9438.patch`: a general DSH settings extension with no OpenTritium or Codex behavior. It is required only when the Codex settings card must appear in a source-built DSH WebUI.
+
+Apply the patch only to that exact clean DSH commit, rebuild DSH, then install the release tarball:
+
+```sh
+gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
+git clone https://github.com/deepseek-ai/deepseek-harness.git deepseek-harness
+cd deepseek-harness
+git checkout 47f943859bef60e4160492346772ded9b24f765a
+git apply --check ../deepseek-harness-settings-client-exposure-47f9438.patch
+git apply ../deepseek-harness-settings-client-exposure-47f9438.patch
+pnpm install && pnpm run build
+pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-0.1.0.tgz
+pnpm dsh --profile web --dump-config
+```
+
+The patch gives settings owners an explicit `expose: 'client'` option. It does not load this bundle, add an OpenTritium row, or alter model/tool behavior. Do not apply it to a dirty checkout or a different commit; wait for the upstream equivalent instead.
+
+To uninstall this source integration, remove the bundle first, then reverse the exact patch and rebuild:
+
+```sh
+pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
+git apply --reverse --check ../deepseek-harness-settings-client-exposure-47f9438.patch
+git apply --reverse ../deepseek-harness-settings-client-exposure-47f9438.patch
+pnpm run build
+pnpm dsh --profile web --dump-config
+```
+
+`dsh plugin remove` removes the profile dependency and its bundle layer. To discard saved shim preferences as well, remove only the `opentritium-codex:` section from `$DSH_HOME/settings.yaml` after stopping DSH. Reverse the DSH patch only when no other local external bundle uses `expose: 'client'`.
 
 The profile loads `@deepseek-ai/dsh-base` first and this bundle afterward. Keep model credentials, provider settings, and environment variables in the profile.
 
@@ -85,7 +120,7 @@ The goal is the closest practical Codex experience over DSH capabilities. Runtim
 
 | Component        | Supported baseline                                                                                                                                                                             |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DeepSeek Harness | Upstream commit `47f943859bef60e4160492346772ded9b24f765a`, corresponding to `0.1.0-rc.5`; compatible updates within the same `0.1.x` line may work.                                           |
+| DeepSeek Harness | Source integration is pinned to commit `47f943859bef60e4160492346772ded9b24f765a` (`0.1.0-rc.5`) and its matching settings-client-exposure patch. Do not assume nearby commits are compatible. |
 | DSH peers        | `@deepseek-ai/dsh-*` peers target `^0.1.0-rc.5`; Cordis targets `^4.0.1` so the plugin does not install a second Cordis runtime.                                                               |
 | Node.js          | `^22.19.0` or `>=24.0.0`.                                                                                                                                                                      |
 | React/WebUI      | React 18; browser code uses DSH client locale, settings, connection, runtime, and slot APIs.                                                                                                   |
@@ -105,7 +140,7 @@ pnpm run bench
 
 The published package includes `lib/`, `cordis.patch.yml`, both README files, and the license. Source persona and locale assets are bundled during `tsdown` build.
 
-Pushing a `vX.Y.Z` tag that exactly matches `package.json` runs the GitHub Actions release workflow. It runs `pnpm run check`, attaches the packed tarball to a GitHub Release, and does not publish to npm.
+Pushing a `vX.Y.Z` tag that exactly matches `package.json` runs the GitHub Actions release workflow. It verifies the matching source integration, runs `pnpm run check`, attaches the packed tarball and patch to a GitHub Release, and does not publish to npm.
 
 ## License
 

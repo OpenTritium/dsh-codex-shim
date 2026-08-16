@@ -1,0 +1,45 @@
+diff --git a/packages/settings/settings/src/index.ts b/packages/settings/settings/src/index.ts
+--- a/packages/settings/settings/src/index.ts
++++ b/packages/settings/settings/src/index.ts
+@@ -41,2 +41,4 @@
+   applies?: SettingsApplies
++  /** Whether trusted configuration clients may read and write this namespace. */
++  expose?: 'client'
+   /**
+@@ -87,2 +89,4 @@
+   applies: SettingsApplies
++  /** Whether this namespace is exposed through the Host configuration API. */
++  expose?: 'client'
+   /** Schema-declared secret positions; present only under `redactSecrets`. */
+@@ -328,2 +332,3 @@
+   applies: SettingsApplies
++  expose?: 'client'
+   /** Owner-supplied check for constraints the schema cannot express. */
+@@ -443,2 +448,3 @@
+       applies: options?.applies ?? 'live',
++      ...options?.expose === undefined ? {} : { expose: options.expose },
+       ...options?.validate === undefined
+@@ -499,2 +505,3 @@
+         applies: registration.applies,
++        ...registration.expose === undefined ? {} : { expose: registration.expose },
+       }
+@@ -829,2 +836,4 @@
+ export interface SettingsSectionHooks<T> {
++  /** Whether browser configuration clients may edit this namespace. */
++  expose?: 'client'
+   /**
+@@ -872,2 +881,3 @@
+       base: entry,
++      ...hooks.expose === undefined ? {} : { expose: hooks.expose },
+       ...hooks.validate === undefined ? {} : { validate: hooks.validate },
+diff --git a/packages/host/apiproxy/src/api-proxy.ts b/packages/host/apiproxy/src/api-proxy.ts
+--- a/packages/host/apiproxy/src/api-proxy.ts
++++ b/packages/host/apiproxy/src/api-proxy.ts
+@@ -1954,4 +1954,7 @@
+     const exposed = modelProviderNamespaces()
+     for (const ns of WEB_SETTINGS_NAMESPACES) exposed.add(ns)
+     for (const ns of PRODUCT_SETTINGS_NAMESPACES) exposed.add(ns)
++    for (const descriptor of ctx.get('settings')?.describe() ?? []) {
++      if (descriptor.expose === 'client') exposed.add(String(descriptor.ns))
++    }
+     return exposed

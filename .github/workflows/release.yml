@@ -37,6 +37,14 @@ jobs:
       - run: pnpm run build
         working-directory: upstream
 
+      - name: Apply the required upstream extension
+        run: git -C upstream apply --check patches/deepseek-harness-settings-client-exposure-47f9438.patch
+
+      - run: git -C upstream apply patches/deepseek-harness-settings-client-exposure-47f9438.patch
+
+      - run: pnpm run build
+        working-directory: upstream
+
       - name: Link pinned DSH peers
         run: |
           node --input-type=module <<'NODE'
@@ -84,7 +92,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-codex-shim-${{ github.ref_name }}
-          path: dist/*.tgz
+          path: |
+            dist/*.tgz
+            patches/*.patch
           if-no-files-found: error
 
       - name: Create or update GitHub Release
@@ -92,7 +102,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.tgz --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/*.tgz patches/*.patch --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.tgz --target "$GITHUB_SHA" --title "$GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" dist/*.tgz patches/*.patch --target "$GITHUB_SHA" --title "$GITHUB_REF_NAME" --generate-notes
           fi

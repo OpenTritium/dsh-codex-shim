@@ -8,12 +8,47 @@
 
 ## 在 profile 中安装
 
-建议安装到常用的 WebUI `web` profile。由 `dsh plugin` 维护 profile manifest 和依赖列表：
+建议将预构建 bundle 安装到常用的 WebUI `web` profile。由 `dsh plugin` 维护 profile manifest 和依赖列表：
 
 ```sh
-dsh plugin --profile web add https://github.com/OpenTritium/dsh-codex-shim.git
+gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz'
+dsh plugin --profile web add ./opentritium-dsh-codex-shim-0.1.0.tgz
 dsh --profile web --dump-config
 ```
+
+这能使用 bundle 内置的 `gpt-5.6-*` 规则。当前未修补的 DSH WebUI 不能显示或保存 shim 设置卡；需要该卡片时请使用下方的源码 checkout 集成。
+
+### 源码 checkout 集成
+
+DSH `47f943859bef60e4160492346772ded9b24f765a` 尚不能让外部 bundle 将 settings namespace 暴露给 WebUI。对应 Release 会附带 `deepseek-harness-settings-client-exposure-47f9438.patch`：这是一个不包含 OpenTritium 或 Codex 行为的通用 DSH settings 扩展。只有想在源码构建的 DSH WebUI 中显示 Codex 设置卡时，才需要应用它。
+
+只在该精确、干净的 DSH commit 上应用 patch，重建 DSH 后再安装 Release tarball：
+
+```sh
+gh release download v0.1.0 --repo OpenTritium/dsh-codex-shim --pattern 'opentritium-dsh-codex-shim-0.1.0.tgz' --pattern 'deepseek-harness-settings-client-exposure-47f9438.patch'
+git clone https://github.com/deepseek-ai/deepseek-harness.git deepseek-harness
+cd deepseek-harness
+git checkout 47f943859bef60e4160492346772ded9b24f765a
+git apply --check ../deepseek-harness-settings-client-exposure-47f9438.patch
+git apply ../deepseek-harness-settings-client-exposure-47f9438.patch
+pnpm install && pnpm run build
+pnpm dsh plugin --profile web add ../opentritium-dsh-codex-shim-0.1.0.tgz
+pnpm dsh --profile web --dump-config
+```
+
+该 patch 为 settings owner 增加显式的 `expose: 'client'` 选项；不会加载本 bundle、添加 OpenTritium row 或改变模型/工具行为。不要对 dirty checkout 或其他 commit 应用它；应等待上游提供等价能力。
+
+卸载这套源码集成时，先移除 bundle，再反向应用同一 patch 并重建：
+
+```sh
+pnpm dsh plugin --profile web remove @opentritium/dsh-codex-shim
+git apply --reverse --check ../deepseek-harness-settings-client-exposure-47f9438.patch
+git apply --reverse ../deepseek-harness-settings-client-exposure-47f9438.patch
+pnpm run build
+pnpm dsh --profile web --dump-config
+```
+
+`dsh plugin remove` 会删除 profile 依赖和 bundle layer。若也要丢弃已经保存的 shim 偏好，请在停止 DSH 后，只删除 `$DSH_HOME/settings.yaml` 中的 `opentritium-codex:` 分节。只有确认没有其他本地外部 bundle 使用 `expose: 'client'` 时，才应反向应用 DSH patch。
 
 profile 会先加载 `@deepseek-ai/dsh-base`，再加载本 bundle。模型凭据、provider 配置和环境变量应放在 profile 中。
 
@@ -85,7 +120,7 @@ shim 只消费 capability 定义，不实现或选择 provider。实际 provider
 
 | 组件             | 支持基线                                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| DeepSeek Harness | 上游 commit `47f943859bef60e4160492346772ded9b24f765a`，对应 `0.1.0-rc.5`；同一 `0.1.x` 系列的兼容更新可能可以工作。                      |
+| DeepSeek Harness | 源码集成固定为 commit `47f943859bef60e4160492346772ded9b24f765a`（`0.1.0-rc.5`）及其对应的 settings-client-exposure patch；不假定附近 commit 兼容。 |
 | DSH peers        | `@deepseek-ai/dsh-*` peer 目标为 `^0.1.0-rc.5`；Cordis 目标为 `^4.0.1`，避免安装第二个 Cordis runtime。                                   |
 | Node.js          | `^22.19.0` 或 `>=24.0.0`。                                                                                                                |
 | React/WebUI      | React 18；浏览器代码使用 DSH 的 locale、settings、connection、runtime 和 slot API。                                                       |
@@ -105,7 +140,7 @@ pnpm run bench
 
 发布包包含 `lib/`、`cordis.patch.yml`、两份 README 和许可证。persona 与 locale 源文件会在 `tsdown` 构建时打包。
 
-推送与 `package.json` 版本严格对应的 `vX.Y.Z` tag 会触发 GitHub Actions 发布流程。它运行 `pnpm run check`，将打出的 tarball 附加到 GitHub Release，不会发布到 npm。
+推送与 `package.json` 版本严格对应的 `vX.Y.Z` tag 会触发 GitHub Actions 发布流程。它会验证对应的源码集成、运行 `pnpm run check`，将打出的 tarball 和 patch 附加到 GitHub Release，不会发布到 npm。
 
 ## 许可证
 

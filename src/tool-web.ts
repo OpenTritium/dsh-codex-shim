@@ -9,7 +9,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { JsonValue, ToolResult } from '@deepseek-ai/dsh-tools'
+import type { JsonValue, ToolResult, WebSearchResultView } from '@deepseek-ai/dsh-tools'
 import type { WebSearchResult, WebSearchSource } from '@deepseek-ai/dsh-web'
 
 /** Cordis plugin name. */
@@ -241,17 +241,28 @@ export function webRunMetaFromResult(meta: unknown): WebRunMeta | undefined {
 }
 
 /**
- * Present a settled `web_run` as one grouped web card. Error results and old
- * logs without valid metadata keep the standard generic fallback.
- * @param _args - validated `web_run` arguments (the grouped view needs no copy).
+ * Present a settled single-query `web_run` as the host's standard web card.
+ * Batched calls keep the generic text fallback so sources stay attributable to
+ * their original query until the pinned host exports a grouped card type.
+ * Error results and old logs without valid metadata keep the standard generic fallback.
+ * @param _args - validated `web_run` arguments.
  * @param result - the durable model-facing result and projected metadata.
- * @returns the grouped web result view, or `undefined` for generic fallback.
+ * @returns the web result view, or `undefined` for generic fallback.
  */
-export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): undefined {
+export function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebSearchResultView | undefined {
   if (result.isError) return undefined
   const meta = webRunMetaFromResult(result.meta)
-  void meta
-  return undefined
+  if (meta === undefined || meta.results.length !== 1) return undefined
+  const [search] = meta.results
+  if (search === undefined) return undefined
+  return {
+    card: 'web',
+    kind: 'search',
+    title: search.query,
+    sources: search.sources,
+    ...search.answer === undefined ? {} : { answer: search.answer },
+    truncated: search.truncated,
+  }
 }
 
 /**

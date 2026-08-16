@@ -1,5 +1,5 @@
 import z from "@deepseek-ai/schemastery";
-import { JsonValue, ToolResult } from "@deepseek-ai/dsh-tools";
+import { JsonValue, ToolResult, WebSearchResultView } from "@deepseek-ai/dsh-tools";
 import { Context } from "@deepseek-ai/cordis";
 //#region src/tool-web.d.ts
 /** Cordis plugin name. */
@@ -96,13 +96,15 @@ declare function webRunMetaFromValue(value: WebRunValue): JsonValue;
  */
 declare function webRunMetaFromResult(meta: unknown): WebRunMeta | undefined;
 /**
- * Present a settled `web_run` as one grouped web card. Error results and old
- * logs without valid metadata keep the standard generic fallback.
- * @param _args - validated `web_run` arguments (the grouped view needs no copy).
+ * Present a settled single-query `web_run` as the host's standard web card.
+ * Batched calls keep the generic text fallback so sources stay attributable to
+ * their original query until the pinned host exports a grouped card type.
+ * Error results and old logs without valid metadata keep the standard generic fallback.
+ * @param _args - validated `web_run` arguments.
  * @param result - the durable model-facing result and projected metadata.
- * @returns the grouped web result view, or `undefined` for generic fallback.
+ * @returns the web result view, or `undefined` for generic fallback.
  */
-declare function presentWebRunResult(_args: WebRunArgs, result: ToolResult): undefined;
+declare function presentWebRunResult(_args: WebRunArgs, result: ToolResult): WebSearchResultView | undefined;
 /**
  * Register the Codex-compatible `web_run` search adapter.
  * @param ctx - context carrying the scoped tool registry and configured web capability.

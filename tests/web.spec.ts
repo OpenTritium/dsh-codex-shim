@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatWebRunOutput, parseWebRunArgs } from '../src/tool-web.ts'
+import { formatWebRunOutput, parseWebRunArgs, presentWebRunResult, webRunMetaFromValue } from '../src/tool-web.ts'
 
 describe('web_run', () => {
   it('keeps the Codex surface search-only', () => {
@@ -16,5 +16,25 @@ describe('web_run', () => {
       sources: [{ url: 'https://example.test/docs', title: 'Docs', snippet: 'Reference' }],
       truncated: false,
     }] })).toContain('[Docs](https://example.test/docs)')
+  })
+
+  it('restores a single-query web card from presentation metadata', () => {
+    const value = {
+      results: [{
+        query: 'harness',
+        content: 'summary',
+        sources: [{ url: 'https://example.test/docs', title: 'Docs' }],
+        truncated: false,
+      }],
+    }
+    const meta = webRunMetaFromValue(value)
+    expect(presentWebRunResult({ search_query: [{ q: 'harness' }] }, { content: [], isError: false, meta: meta as never })).toEqual({
+      card: 'web',
+      kind: 'search',
+      title: 'harness',
+      answer: 'summary',
+      sources: [{ url: 'https://example.test/docs', title: 'Docs' }],
+      truncated: false,
+    })
   })
 })

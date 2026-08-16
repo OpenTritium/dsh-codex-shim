@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePlanPresentation } from '../src/client/plan-presentation.ts'
+import { changedPlanItems, parsePlanPresentation } from '../src/client/plan-presentation.ts'
 
 describe('parsePlanPresentation', () => {
   it('keeps a valid plan and its explanation', () => {
@@ -24,5 +24,28 @@ describe('parsePlanPresentation', () => {
     expect(parsePlanPresentation('{"plan":[{"step":"Missing status"}]}')).toBeUndefined()
     expect(parsePlanPresentation('{"plan":[{"step":"Unexpected","status":"blocked"}]}')).toBeUndefined()
     expect(parsePlanPresentation('not json')).toBeUndefined()
+  })
+})
+
+describe('changedPlanItems', () => {
+  const current = [
+    { step: 'Keep', status: 'completed' as const },
+    { step: 'Advance', status: 'in_progress' as const },
+    { step: 'New', status: 'pending' as const },
+  ]
+
+  it('keeps new and status-changed steps', () => {
+    expect(changedPlanItems(current, [
+      { step: 'Keep', status: 'completed' },
+      { step: 'Advance', status: 'pending' },
+    ])).toEqual([
+      { step: 'Advance', status: 'in_progress' },
+      { step: 'New', status: 'pending' },
+    ])
+  })
+
+  it('keeps the complete plan for the first or idempotent update', () => {
+    expect(changedPlanItems(current, undefined)).toEqual(current)
+    expect(changedPlanItems(current, current)).toEqual(current)
   })
 })

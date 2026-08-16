@@ -204,14 +204,7 @@
 }
 
 .planCompletedIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--dsw-alias-state-success-primary);
-  color: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-state-success-primary);
 }
 
 .planLoadingIcon {
@@ -220,11 +213,7 @@
 }
 
 .planPendingIcon {
-  box-sizing: border-box;
-  width: 12px;
-  height: 12px;
-  border: 1px dashed var(--dsw-alias-label-caption);
-  border-radius: 50%;
+  color: var(--dsw-alias-label-caption);
 }
 
 @keyframes dsh-codex-plan-loading {

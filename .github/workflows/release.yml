@@ -91,8 +91,8 @@ jobs:
 
       - name: Verify the optional WebUI settings patch
         run: |
-          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
-          git -C upstream apply "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
+          git apply --check "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
+          git apply "$GITHUB_WORKSPACE/patches/deepseek-harness-settings-client-exposure-47f9438.patch"
           pnpm run build
         working-directory: upstream
 

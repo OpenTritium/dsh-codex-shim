@@ -15,6 +15,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import css from './CodexToolRow.module.css'
+import { splitTerminalOutput } from './terminal-output.ts'
 
 type CodexToolRowProps = ToolCallViewProps & PropsLocale<'codex'>
 type CodexRowState = 'running' | 'ok' | 'error' | 'stopped'
@@ -158,10 +159,19 @@ export function CodexToolRow({ toolName, block, inspect, t }: CodexToolRowProps)
   const state = rowState(block)
   const argsRaw = argsOf(block)
   const output = resultText(block)
+  const terminalOutput = toolName === 'exec_command' || toolName === 'write_stdin'
+    ? splitTerminalOutput(output ?? '')
+    : null
+  const args = objectArgs(argsRaw)
+  const command = toolName === 'exec_command' ? stringArg(args, 'cmd') : undefined
+  const stdin = toolName === 'write_stdin' ? stringArg(args, 'chars') : undefined
+  const workdir = toolName === 'exec_command' ? stringArg(args, 'workdir') : undefined
   const diff = toolName === 'apply_patch' ? patchDiffs(block) : null
   const expandable = diff !== null || argsRaw !== '' || output !== null
   const open = expanded && expandable
-  const outputSummary = state === 'error' && output !== null ? firstLine(output) : null
+  const outputSummary = state === 'error' && output !== null
+    ? firstLine(terminalOutput?.stderr || terminalOutput?.stdout || output)
+    : null
   const summary = outputSummary ?? (diff === null ? summaryFor(toolName, argsRaw, t) : patchSummary(diff))
   const status = stateLabel(state, t)
   const toggle = (): void => { setExpanded(value => !value) }
@@ -190,13 +200,40 @@ export function CodexToolRow({ toolName, block, inspect, t }: CodexToolRowProps)
       >
         <div className={css.bodyWrap}>
           {diff !== null ? <DiffBlock diffs={diff} maxLines={8} /> : null}
-          {diff === null && argsRaw !== '' ? (
+          {diff === null && terminalOutput !== null && toolName === 'exec_command' && command !== undefined ? (
+            <section className={css.ioCard} data-stream="command" aria-label={t('row.command')}>
+              <span className={css.ioLabel}>{t('row.command')}</span>
+              <div className={css.streamBody}>
+                <pre className={css.ioText}>{command}</pre>
+                {workdir !== undefined ? <span className={css.workdir}>{workdir}</span> : null}
+              </div>
+            </section>
+          ) : null}
+          {diff === null && terminalOutput !== null && toolName === 'write_stdin' ? (
+            <section className={css.ioCard} data-stream="stdin" aria-label={t('row.stdin')}>
+              <span className={css.ioLabel}>{t('row.stdin')}</span>
+              <pre className={css.ioText}>{stdin ?? t('row.noInput')}</pre>
+            </section>
+          ) : null}
+          {diff === null && terminalOutput === null && argsRaw !== '' ? (
             <section className={css.ioCard} aria-label={t('row.input')}>
               <span className={css.ioLabel}>{t('row.input')}</span>
               <pre className={css.ioText}>{argsRaw}</pre>
             </section>
           ) : null}
-          {diff === null && output !== null ? (
+          {diff === null && terminalOutput !== null && terminalOutput.stdout !== '' ? (
+            <section className={css.ioCard} data-stream="stdout" aria-label={t('row.stdout')}>
+              <span className={css.ioLabel}>{t('row.stdout')}</span>
+              <pre className={css.ioText}>{terminalOutput.stdout}</pre>
+            </section>
+          ) : null}
+          {diff === null && terminalOutput !== null && terminalOutput.stderr !== '' ? (
+            <section className={css.ioCard} data-stream="stderr" aria-label={t('row.stderr')}>
+              <span className={css.ioLabel}>{t('row.stderr')}</span>
+              <pre className={css.ioText} data-error>{terminalOutput.stderr}</pre>
+            </section>
+          ) : null}
+          {diff === null && terminalOutput === null && output !== null ? (
             <section className={css.ioCard} aria-label={t('row.output')}>
               <span className={css.ioLabel}>{t('row.output')}</span>
               <pre className={css.ioText} data-error={state === 'error' || undefined}>{output}</pre>

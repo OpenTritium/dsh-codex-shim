@@ -88,7 +88,7 @@
 
 .ioCard {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l1);
@@ -96,14 +96,27 @@
   background: var(--dsw-alias-markdown-code-block);
 }
 
+.ioCard[data-stream='stderr'] {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 35%, var(--dsw-alias-border-l1));
+}
+
+.ioCard[data-stream='stderr'] .ioLabel {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.streamBody {
+  min-width: 0;
+}
+
 .ioLabel {
-  padding: 8px 4px 8px 8px;
+  padding: 8px;
   border-right: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-markdown-code-block-banner);
   font-size: 10px;
   font-weight: 600;
   line-height: 16px;
   color: var(--dsw-alias-label-caption);
+  white-space: nowrap;
 }
 
 .ioText {
@@ -120,6 +133,16 @@
 
 .ioText[data-error] {
   color: var(--dsw-alias-state-error-primary);
+}
+
+.workdir {
+  display: block;
+  padding: 0 10px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--dsw-font-markdown-code-block-small);
+  color: var(--dsw-alias-label-caption);
 }
 
 .inspectButton {

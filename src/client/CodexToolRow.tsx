@@ -295,6 +295,9 @@ export function CodexToolRow({ toolName, block, inspect, t, imageLoader }: Codex
             <section className={css.planCard} aria-label={t('row.plan')}>
               <span className={css.ioLabel}>{t('row.plan')}</span>
               <div className={css.planContent}>
+                {plan.explanation === undefined ? null : (
+                  <p className={css.planChange}>{plan.explanation}</p>
+                )}
                 <div className={css.planOverview}>
                   <span className={css.planProgressLabel}>
                     {t('row.planProgress', { completed: completedPlanItems, total: plan.items.length })}
